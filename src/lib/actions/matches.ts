@@ -88,19 +88,3 @@ export async function finishGameAction(gameId: string): Promise<ActionResult> {
   const supabase = await createClient();
   return done(gameId, supabase.rpc("finish_game", { p_game_id: gameId }));
 }
-
-export async function setLiveLinkAction(
-  gameId: string,
-  enabled: boolean,
-  regenerate = false,
-): Promise<ActionResult & { token?: string | null }> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("set_live_link", {
-    p_game_id: gameId,
-    p_enabled: enabled,
-    p_regenerate: regenerate,
-  });
-  if (error) return { error: toMessage(error) };
-  revalidatePath(`/game/${gameId}/live`);
-  return { token: data };
-}

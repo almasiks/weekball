@@ -54,7 +54,6 @@ export default async function LivePage({ params }: PageProps<"/game/[id]/live">)
           matches={data.matches}
           events={data.events}
           names={data.names}
-          liveToken={view.game.live_token}
           siteUrl={siteUrl}
           meta={{
             startsAt: view.game.starts_at,

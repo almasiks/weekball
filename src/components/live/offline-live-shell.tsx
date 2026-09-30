@@ -87,7 +87,6 @@ export function OfflineLiveShell() {
         matches={snapshot.matches}
         events={snapshot.events}
         names={snapshot.names}
-        liveToken={null}
         siteUrl={snapshot.siteUrl}
         meta={snapshot.meta}
         initialOffset={snapshot.offset}

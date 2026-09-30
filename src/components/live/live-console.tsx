@@ -23,7 +23,6 @@ import { EventFeed } from "@/components/match/event-feed";
 import { Scoreboard, statusLabel } from "@/components/match/scoreboard";
 import { StandingsTable } from "@/components/match/standings-table";
 import { MatchSetup } from "@/components/live/match-setup";
-import { LiveLinkPanel } from "@/components/live/live-link-panel";
 import { signalTimeUp, useNow, useServerOffset, useWakeLock } from "@/lib/match/hooks";
 import { useOutbox } from "@/lib/match/use-outbox";
 import { saveSnapshot } from "@/lib/match/snapshot";
@@ -48,7 +47,6 @@ type Props = {
   matches: LiveMatch[];
   events: LiveEvent[];
   names: Record<string, string>;
-  liveToken: string | null;
   siteUrl: string;
   meta: { startsAt: string; timezone: string; place: string };
   // Offline shell: opened from the IndexedDB snapshot, no server actions / links.
@@ -470,7 +468,7 @@ export function LiveConsole(props: Props) {
 
       {actionError && <Notice variant="error">{actionError}</Notice>}
 
-      {current && (
+      {current && currentEvents.length > 0 && (
         <Card size="sm">
           <CardHeader>
             <CardTitle>События матча</CardTitle>
@@ -507,7 +505,6 @@ export function LiveConsole(props: Props) {
         </Button>
       )}
 
-      {!props.offline && <LiveLinkPanel gameId={gameId} token={props.liveToken} siteUrl={siteUrl} />}
 
       {/* ---------------- Sheets ---------------- */}
       <BottomSheet

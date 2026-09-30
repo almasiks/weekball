@@ -29,6 +29,23 @@ const ERROR_MESSAGES: Record<string, string> = {
   not_your_turn: "Сейчас не ваш ход.",
   player_not_available: "Этого игрока уже выбрали.",
   invalid_level: "Уровень — от 1 до 5.",
+  team_has_matches: "Эта команда уже играла — удалить её нельзя.",
+  match_not_found: "Матч не найден — обновите страницу.",
+  invalid_match_teams: "Выберите две разные команды этой игры.",
+  invalid_match_settings: "Таймов 1–4, длительность тайма от 1 до 60 минут.",
+  match_already_started: "Матч уже начался — настройки менять нельзя.",
+  another_match_live: "Сначала завершите текущий матч.",
+  last_period: "Это последний тайм — завершите матч.",
+  match_not_started: "Матч ещё не начался.",
+  match_not_live: "Матч не идёт — событие не записано.",
+  invalid_event: "Некорректное событие.",
+  invalid_event_team: "Команда не участвует в этом матче.",
+  invalid_assist: "Ассистент должен быть из той же команды и не автором гола.",
+  invalid_sub: "Замена: выберите уходящего и выходящего игроков одной команды.",
+  invalid_event_time: "Некорректная минута события.",
+  event_not_found: "Событие не найдено.",
+  no_finished_matches: "Сначала завершите хотя бы один матч.",
+  match_in_progress: "Сначала завершите идущий матч.",
 };
 
 export const DEFAULT_ERROR = "Что-то пошло не так. Попробуйте ещё раз.";

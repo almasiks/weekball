@@ -1,5 +1,6 @@
 // Mirrors supabase/migrations. Regenerate with:
 //   npx supabase gen types typescript --project-id <id> > src/lib/supabase/database.types.ts
+import type { LiveEvent, LiveMatch, StandingRow } from "@/lib/match/types";
 
 export type PlayerPosition = "gk" | "def" | "mid" | "fwd";
 export type MemberRole = "organizer" | "player";
@@ -47,6 +48,21 @@ export type GameRow = {
   draft_active: boolean;
   draft_turn: number;
   teams_updated_at: string | null;
+  live_token: string | null;
+};
+
+export type MatchRow = LiveMatch & {
+  game_id: string;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+};
+
+export type EventRow = LiveEvent & {
+  game_id: string;
+  created_by: string | null;
+  created_at: string;
+  voided_at: string | null;
 };
 
 export type TeamRow = {
@@ -228,6 +244,18 @@ export type Database = {
           },
         ];
       };
+      matches: {
+        Row: MatchRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      events: {
+        Row: EventRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       team_players: {
         Row: TeamPlayerRow;
         Insert: never;
@@ -304,6 +332,48 @@ export type Database = {
       draft_pick: { Args: { p_game_id: string; p_player_id: string }; Returns: string };
       end_draft: { Args: { p_game_id: string }; Returns: undefined };
       set_player_level: { Args: { p_player_id: string; p_level: number }; Returns: undefined };
+      create_match: {
+        Args: {
+          p_game_id: string;
+          p_team_a_id: string;
+          p_team_b_id: string;
+          p_periods?: number;
+          p_period_seconds?: number;
+        };
+        Returns: MatchRow;
+      };
+      generate_round_robin: {
+        Args: { p_game_id: string; p_periods?: number; p_period_seconds?: number };
+        Returns: MatchRow[];
+      };
+      update_match_settings: {
+        Args: { p_match_id: string; p_periods: number; p_period_seconds: number };
+        Returns: MatchRow;
+      };
+      delete_match: { Args: { p_match_id: string }; Returns: undefined };
+      timer_start: { Args: { p_match_id: string; p_client_ts?: string | null }; Returns: MatchRow };
+      timer_pause: { Args: { p_match_id: string; p_client_ts?: string | null }; Returns: MatchRow };
+      timer_resume: { Args: { p_match_id: string; p_client_ts?: string | null }; Returns: MatchRow };
+      timer_break: {
+        Args: { p_match_id: string; p_period: number; p_client_ts?: string | null };
+        Returns: MatchRow;
+      };
+      timer_next_period: {
+        Args: { p_match_id: string; p_period: number; p_client_ts?: string | null };
+        Returns: MatchRow;
+      };
+      finish_match: { Args: { p_match_id: string; p_client_ts?: string | null }; Returns: MatchRow };
+      reopen_match: { Args: { p_match_id: string }; Returns: MatchRow };
+      add_event: { Args: { payload: Omit<LiveEvent, "voided_at"> }; Returns: EventRow };
+      void_event: { Args: { p_event_id: string }; Returns: EventRow };
+      game_standings: { Args: { p_game_id: string }; Returns: StandingRow[] };
+      finish_game: { Args: { p_game_id: string }; Returns: undefined };
+      set_live_link: {
+        Args: { p_game_id: string; p_enabled: boolean; p_regenerate?: boolean };
+        Returns: string | null;
+      };
+      get_live_game: { Args: { p_token: string }; Returns: unknown };
+      server_time: { Args: Record<string, never>; Returns: string };
     };
     Enums: {
       player_position: PlayerPosition;

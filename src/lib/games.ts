@@ -17,6 +17,8 @@ export type SignupEntry = {
   name: string;
   avatarUrl: string | null;
   level: number;
+  rating: number | null;
+  ratedGames: number;
   position: PlayerPosition | null;
   status: SignupStatus;
   arrival: ArrivalStatus;
@@ -74,7 +76,7 @@ export const getGameView = cache(
         supabase
           .from("signups")
           .select(
-            "player_id, status, arrival, late_minutes, created_at, players(name, avatar_url, level, position)",
+            "player_id, status, arrival, late_minutes, created_at, players(name, avatar_url, level, position, rating, rated_games)",
           )
           .eq("game_id", gameId)
           .order("created_at", { ascending: true }),
@@ -97,6 +99,8 @@ export const getGameView = cache(
       name: s.players?.name ?? "Без имени",
       avatarUrl: s.players?.avatar_url ?? null,
       level: s.players?.level ?? 3,
+      rating: s.players?.rating ?? null,
+      ratedGames: s.players?.rated_games ?? 0,
       position: s.players?.position ?? null,
       status: s.status,
       arrival: s.arrival,

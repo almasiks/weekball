@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PlayerAvatar } from "@/components/player-avatar";
@@ -37,12 +38,12 @@ export function MemberList({ members, currentUserId, action, below }: Props) {
           <div className="flex min-h-12 items-center gap-3">
             <PlayerAvatar name={member.name} />
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate font-medium">
+              <Link href={`/players/${member.playerId}`} className="truncate font-medium underline-offset-2 hover:underline">
                 {member.name}
                 {member.playerId === currentUserId && (
                   <span className="text-muted-foreground"> (вы)</span>
                 )}
-              </span>
+              </Link>
               <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                 {member.role === "organizer" ? (
                   <Badge variant="secondary" className="w-fit gap-1">

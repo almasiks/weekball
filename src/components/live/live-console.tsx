@@ -26,6 +26,7 @@ import { MatchSetup } from "@/components/live/match-setup";
 import { LiveLinkPanel } from "@/components/live/live-link-panel";
 import { signalTimeUp, useNow, useServerOffset, useWakeLock } from "@/lib/match/hooks";
 import { useOutbox } from "@/lib/match/use-outbox";
+import { saveSnapshot } from "@/lib/match/snapshot";
 import { applyTimerCommand, computeElapsed, type TimerCommand } from "@/lib/match/timer";
 import { computeScore, computeStandings } from "@/lib/match/score";
 import type { EventPayload, QueueItem } from "@/lib/match/queue";
@@ -49,6 +50,10 @@ type Props = {
   names: Record<string, string>;
   liveToken: string | null;
   siteUrl: string;
+  meta: { startsAt: string; timezone: string; place: string };
+  // Offline shell: opened from the IndexedDB snapshot, no server actions / links.
+  offline?: boolean;
+  initialOffset?: number;
 };
 
 type Picker =
@@ -69,7 +74,8 @@ const EVENT_TITLE: Record<EventType, string> = {
 export function LiveConsole(props: Props) {
   const { gameId, teams, names, siteUrl } = props;
   const router = useRouter();
-  const offset = useServerOffset();
+  const measuredOffset = useServerOffset();
+  const offset = measuredOffset ?? props.initialOffset ?? 0;
   const now = useNow(250);
   const [picker, setPicker] = useState<Picker>(null);
   const [confirmFinish, setConfirmFinish] = useState<"match" | "game" | null>(null);
@@ -82,6 +88,23 @@ export function LiveConsole(props: Props) {
     refreshTimer.current = setTimeout(() => router.refresh(), 200);
   }, [router]);
   const outbox = useOutbox(gameId, refresh, props.matches);
+
+  // Keep the last server state on this device so the console can reopen offline.
+  useEffect(() => {
+    if (props.offline) return;
+    saveSnapshot({
+      gameId,
+      savedAt: clock(),
+      meta: props.meta,
+      gameStatus: props.gameStatus,
+      teams: props.teams,
+      matches: props.matches,
+      events: props.events,
+      names: props.names,
+      siteUrl: props.siteUrl,
+      offset: measuredOffset ?? 0,
+    });
+  }, [gameId, props.offline, props.meta, props.gameStatus, props.teams, props.matches, props.events, props.names, props.siteUrl, measuredOffset]);
 
   // --- Optimistic state: server data + queued (unsent / just sent) actions, in order.
   const { matches, events } = useMemo(() => {
@@ -481,7 +504,7 @@ export function LiveConsole(props: Props) {
         </Button>
       )}
 
-      <LiveLinkPanel gameId={gameId} token={props.liveToken} siteUrl={siteUrl} />
+      {!props.offline && <LiveLinkPanel gameId={gameId} token={props.liveToken} siteUrl={siteUrl} />}
 
       {/* ---------------- Sheets ---------------- */}
       <BottomSheet
@@ -594,10 +617,19 @@ export function LiveConsole(props: Props) {
                 timer({ kind: "finish" });
                 setConfirmFinish(null);
               } else {
-                runAction(() => finishGameAction(gameId), () => {
-                  setConfirmFinish(null);
-                  router.push(`/game/${gameId}`);
-                });
+                runAction(
+                  async () => {
+                    const r = await finishGameAction(gameId);
+                    if (r.error) return r;
+                    // Statistics + ratings. If this fails, the game page shows "Пересчитать".
+                    await fetch(`/api/games/${gameId}/finalize`, { method: "POST" }).catch(() => null);
+                    return {};
+                  },
+                  () => {
+                    setConfirmFinish(null);
+                    router.push(`/game/${gameId}`);
+                  },
+                );
               }
             }}
           >

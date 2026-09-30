@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/create-next",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/recalc",
+      "schedule": "30 3 * * *"
     }
   ]
 }

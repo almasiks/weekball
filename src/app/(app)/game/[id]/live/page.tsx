@@ -56,6 +56,11 @@ export default async function LivePage({ params }: PageProps<"/game/[id]/live">)
           names={data.names}
           liveToken={view.game.live_token}
           siteUrl={siteUrl}
+          meta={{
+            startsAt: view.game.starts_at,
+            timezone: view.game.timezone,
+            place: view.game.place,
+          }}
         />
       )}
     </div>

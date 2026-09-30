@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, MessageCircle, Swords, Timer, Users } from "lucide-react";
 import { MatchesOverview } from "@/components/match/matches-overview";
+import { RecalcButton } from "@/components/stats/recalc-button";
+import { createClient } from "@/lib/supabase/server";
 import { getMatchData } from "@/lib/match/load";
 import { gameSummaryText, whatsappUrl } from "@/lib/share";
 import { ShareTeamsButton } from "@/components/teams/share-teams-button";
@@ -81,6 +83,10 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
   const teamsEditable = ["signup", "closed", "teams", "live"].includes(view.game.status);
   const canRunMatch = teamsEditable && view.teams.length >= 2;
   const matchData = await getMatchData(view);
+  const supabase = await createClient();
+  const topScorers = matchData.matches.some((m) => m.status === "finished")
+    ? ((await supabase.rpc("game_top_scorers", { p_game_id: view.game.id })).data ?? [])
+    : [];
   const siteUrl = await getSiteUrl();
 
   return (
@@ -108,11 +114,37 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
         </Link>
       )}
 
+      {isOrganizer && view.game.status === "finished" && !view.game.stats_processed_at && (
+        <Notice variant="error">
+          <div className="flex flex-col gap-2">
+            <span>Статистика и рейтинги по этой игре не обновлены.</span>
+            <RecalcButton gameId={view.game.id} />
+          </div>
+        </Notice>
+      )}
+
       {matchData.matches.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">
             {view.game.status === "finished" ? "Итоги" : "Матчи"}
           </h2>
+          {topScorers.length > 0 && (
+            <p className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-sm">
+              <span aria-hidden>🏆</span>
+              <span>
+                Лучший бомбардир вечера:{" "}
+                {topScorers.map((s, i) => (
+                  <span key={s.player_id}>
+                    {i > 0 && ", "}
+                    <Link href={`/players/${s.player_id}`} className="font-semibold underline-offset-2 hover:underline">
+                      {s.name}
+                    </Link>
+                  </span>
+                ))}{" "}
+                — {topScorers[0].goals} ⚽
+              </span>
+            </p>
+          )}
           <MatchesOverview
             matches={matchData.matches}
             events={matchData.events}

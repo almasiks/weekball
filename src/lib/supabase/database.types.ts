@@ -49,6 +49,7 @@ export type GameRow = {
   draft_turn: number;
   teams_updated_at: string | null;
   live_token: string | null;
+  stats_processed_at: string | null;
 };
 
 export type MatchRow = LiveMatch & {
@@ -63,6 +64,47 @@ export type EventRow = LiveEvent & {
   created_by: string | null;
   created_at: string;
   voided_at: string | null;
+};
+
+export type LeaderboardRow = {
+  player_id: string;
+  name: string;
+  avatar_url: string | null;
+  position: PlayerPosition | null;
+  rating: number;
+  rated_games: number;
+  matches: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  win_pct: number;
+  goals: number;
+  own_goals: number;
+  assists: number;
+  goals_per_match: number | string;
+  yellows: number;
+  reds: number;
+  finished_games: number;
+  games_played: number;
+  attendance_pct: number;
+  no_shows: number;
+  form: string; // oldest -> newest, e.g. "WDLWW"
+};
+
+export type GameHistoryRow = {
+  game_id: string;
+  starts_at: string;
+  timezone: string;
+  place: string;
+  matches: {
+    team_a: string;
+    color_a: string;
+    score_a: number;
+    team_b: string;
+    color_b: string;
+    score_b: number;
+  }[];
+  top_scorers: { player_id: string; name: string; goals: number }[];
 };
 
 export type TeamRow = {
@@ -95,6 +137,7 @@ export type Database = {
           position: PlayerPosition | null;
           level: number;
           rating: number;
+          rated_games: number;
           created_at: string;
         };
         Insert: never;
@@ -374,6 +417,30 @@ export type Database = {
       };
       get_live_game: { Args: { p_token: string }; Returns: unknown };
       server_time: { Args: Record<string, never>; Returns: string };
+      leaderboard: { Args: { p_group_id: string; p_from?: string | null }; Returns: LeaderboardRow[] };
+      player_profile: { Args: { p_group_id: string; p_player_id: string }; Returns: unknown };
+      game_top_scorers: {
+        Args: { p_game_id: string };
+        Returns: { player_id: string; name: string; goals: number }[];
+      };
+      game_history: { Args: { p_group_id: string; p_limit?: number }; Returns: GameHistoryRow[] };
+      apply_rating_history: {
+        Args: {
+          p_group_id: string;
+          payload: {
+            history: {
+              player_id: string;
+              game_id: string;
+              rating_before: number;
+              rating_after: number;
+              delta: number;
+            }[];
+            players: { player_id: string; rating: number; rated_games: number }[];
+            processed_game_ids: string[];
+          };
+        };
+        Returns: undefined;
+      };
     };
     Enums: {
       player_position: PlayerPosition;

@@ -14,9 +14,9 @@ export function useNow(intervalMs = 250): number {
   return now;
 }
 
-/** Server − device clock difference, measured once (best of 3 round trips). */
-export function useServerOffset(): number {
-  const [offset, setOffset] = useState(0);
+/** Server − device clock difference, measured once (best of 3 round trips). Null until measured. */
+export function useServerOffset(): number | null {
+  const [offset, setOffset] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
     const supabase = createClient();

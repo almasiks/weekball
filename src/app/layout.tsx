@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
-import Link from "next/link";
-import { BottomNav } from "@/components/bottom-nav";
-import { getAppContext } from "@/lib/session";
+import { SerwistProvider } from "@serwist/turbopack/react";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -10,12 +8,28 @@ const geistSans = Geist({
   subsets: ["latin", "cyrillic"],
 });
 
+const DESCRIPTION = "Запись на игру, команды, live-счёт и статистика нашего еженедельного футбола.";
+
 export const metadata: Metadata = {
-  metadataBase: process.env.NEXT_PUBLIC_SITE_URL
-    ? new URL(process.env.NEXT_PUBLIC_SITE_URL)
-    : undefined,
+  metadataBase: process.env.NEXT_PUBLIC_SITE_URL ? new URL(process.env.NEXT_PUBLIC_SITE_URL) : undefined,
+  applicationName: "Weekly Football",
   title: { default: "Weekly Football", template: "%s · Weekly Football" },
-  description: "Запись на игру, команды и счёт для нашего еженедельного футбола.",
+  description: DESCRIPTION,
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Футбол" },
+  formatDetection: { telephone: false },
+  icons: {
+    icon: [{ url: "/favicon.ico" }, { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Weekly Football",
+    locale: "ru_RU",
+    title: "Weekly Football",
+    description: DESCRIPTION,
+    images: [{ url: "/icons/icon-512.png", width: 512, height: 512 }],
+  },
+  twitter: { card: "summary", title: "Weekly Football", description: DESCRIPTION },
 };
 
 export const viewport: Viewport = {
@@ -28,35 +42,15 @@ export const viewport: Viewport = {
   ],
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const ctx = await getAppContext();
-
+// Root layout stays static (no cookies): the offline shells in (shell) are precached.
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ru" className={`${geistSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <header className="sticky top-0 z-20 border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur">
-          <div className="mx-auto flex h-14 max-w-md items-center gap-2 px-4">
-            <Link href="/" className="flex min-h-11 items-center gap-2 font-semibold">
-              <span aria-hidden className="text-xl">⚽</span>
-              <span>Weekly Football</span>
-            </Link>
-            {ctx.group && (
-              <span className="ml-auto truncate text-sm text-muted-foreground">
-                {ctx.group.name}
-              </span>
-            )}
-          </div>
-        </header>
-        <main
-          className={
-            ctx.group
-              ? "mx-auto w-full max-w-md flex-1 px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))]"
-              : "mx-auto w-full max-w-md flex-1 px-4 py-6"
-          }
-        >
+        {/* cacheOnNavigation off: pages contain personal data and must not land in the SW cache. */}
+        <SerwistProvider swUrl="/serwist/sw.js" cacheOnNavigation={false} reloadOnOnline={false}>
           {children}
-        </main>
-        {ctx.group && <BottomNav isOrganizer={ctx.role === "organizer"} />}
+        </SerwistProvider>
       </body>
     </html>
   );

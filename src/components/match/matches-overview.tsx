@@ -24,7 +24,7 @@ type Props = {
 
 export function MatchesOverview(props: Props) {
   const measured = useServerOffset();
-  const offset = props.offset ?? measured;
+  const offset = props.offset ?? measured ?? 0;
   const { matches, events, teams, names, standings, matchHref } = props;
   // Live match first, then the rest in order.
   const ordered = [...matches].sort(

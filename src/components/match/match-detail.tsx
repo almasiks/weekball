@@ -23,7 +23,7 @@ type Props = {
 
 export function MatchDetail({ match, teams, events, names, shareUrl, offset: given }: Props) {
   const measured = useServerOffset();
-  const offset = given ?? measured;
+  const offset = given ?? measured ?? 0;
   const matchEvents = events.filter((e) => e.match_id === match.id);
   const sides = [match.team_a_id, match.team_b_id]
     .map((id) => teams.find((t) => t.id === id))

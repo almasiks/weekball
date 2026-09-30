@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Weekly Football
 
-## Getting Started
+PWA для еженедельной игры в футбол: запись на игру, деление на команды, live-счёт и статистика.
+Полное ТЗ — `docs/TZ.md`, контекст для разработки — `CLAUDE.md`.
 
-First, run the development server:
+Стек: Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · shadcn/ui · Supabase (Postgres, Auth, RLS) · Vercel.
+
+## Локальный запуск
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # заполнить значения из Supabase
+npx supabase login
+npx supabase link --project-ref <project-ref>
+npx supabase db push         # применить миграции из supabase/migrations
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Проверки перед коммитом:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint && npm run typecheck && npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Настройка Supabase (один раз)
 
-## Learn More
+1. **Authentication → Sign In / Providers**
+   - включить **Allow anonymous sign-ins**;
+   - включить **Allow manual linking** (нужно для привязки Google к анонимному профилю);
+   - включить провайдер **Google**, вставить Client ID и Client Secret из Google Cloud.
+2. **Authentication → URL Configuration**
+   - Site URL: адрес продакшена (`https://<app>.vercel.app`);
+   - Redirect URLs: `http://localhost:3000/auth/callback`, `https://<app>.vercel.app/auth/callback`.
+3. В Google Cloud (OAuth client, тип Web application) в **Authorized redirect URIs** добавить
+   `https://<project-ref>.supabase.co/auth/v1/callback`.
 
-To learn more about Next.js, take a look at the following resources:
+## Деплой на Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Импортировать репозиторий GitHub в Vercel (фреймворк определится как Next.js).
+2. В **Settings → Environment Variables** задать `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL` (адрес продакшена без `/` в конце).
+3. Задеплоить. После первого деплоя проверить, что адрес Vercel добавлен в Redirect URLs Supabase.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Структура
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/app/            страницы и роуты (App Router)
+src/components/     UI-компоненты (ui/ — shadcn)
+src/lib/supabase/   клиенты Supabase (browser, server, middleware) и типы БД
+src/lib/actions/    server actions (группы, вход)
+src/proxy.ts        обновление сессии Supabase на каждом запросе (бывший middleware)
+supabase/migrations SQL-миграции — единственный способ менять схему
+```

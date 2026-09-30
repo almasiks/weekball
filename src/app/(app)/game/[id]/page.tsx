@@ -151,7 +151,7 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
             teams={matchData.teams}
             names={matchData.names}
             standings={matchData.standings}
-            matchHref={(matchId) => `/match/${matchId}`}
+            matchHrefBase="/match/"
             finished={view.game.status === "finished"}
           />
           {matchData.matches.some((m) => m.status === "finished") && (

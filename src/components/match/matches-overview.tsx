@@ -15,8 +15,9 @@ type Props = {
   teams: LiveTeam[];
   names: Record<string, string>;
   standings: StandingRow[];
-  // Signed-in pages link each match; the public page doesn't.
-  matchHref?: (matchId: string) => string;
+  // Signed-in pages link each match (e.g. "/match/"); the public page doesn't.
+  // A string, not a function: this is a Client Component rendered from the server.
+  matchHrefBase?: string;
   // Guests get the offset from get_live_game instead of an RPC.
   offset?: number;
   finished?: boolean;
@@ -25,7 +26,7 @@ type Props = {
 export function MatchesOverview(props: Props) {
   const measured = useServerOffset();
   const offset = props.offset ?? measured ?? 0;
-  const { matches, events, teams, names, standings, matchHref } = props;
+  const { matches, events, teams, names, standings, matchHrefBase } = props;
   // Live match first, then the rest in order.
   const ordered = [...matches].sort(
     (a, b) =>
@@ -42,8 +43,8 @@ export function MatchesOverview(props: Props) {
         return (
           <Card key={m.id} size="sm">
             <CardContent>
-              {matchHref ? (
-                <Link href={matchHref(m.id)} className="relative block" aria-label="Подробнее о матче">
+              {matchHrefBase ? (
+                <Link href={`${matchHrefBase}${m.id}`} className="relative block" aria-label="Подробнее о матче">
                   {board}
                   <ChevronRight className="absolute top-1/2 right-0 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
                 </Link>

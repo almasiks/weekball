@@ -19,8 +19,23 @@ npm run dev                  # http://localhost:3000
 Проверки перед коммитом:
 
 ```bash
-npm run lint && npm run typecheck && npm run build
+npm test && npm run lint && npm run typecheck && npm run build
 ```
+
+`npm test` — unit-тесты (Vitest), сейчас это алгоритм деления на команды `src/lib/teams/balance.ts`.
+
+### Локальный Supabase и тестовые игроки
+
+```bash
+npx supabase start            # нужен запущенный Docker Desktop; миграции применятся сами
+npx supabase status -o env    # URL и ключи для .env.local
+npm run seed:players -- 18    # 18 тестовых игроков с уровнями и позициями → на ближайшую игру
+npm run seed:players -- 18 ABCD2345   # в конкретную группу (по коду приглашения)
+npm run seed:clean            # удалить всех тестовых игроков
+```
+
+Скрипт `scripts/seed-test-players.ts` работает только с локальным Supabase
+(127.0.0.1 / localhost) и нужен `SUPABASE_SERVICE_ROLE_KEY` в `.env.local`.
 
 ## Настройка Supabase (один раз)
 

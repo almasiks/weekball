@@ -11,6 +11,9 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
+  metadataBase: process.env.NEXT_PUBLIC_SITE_URL
+    ? new URL(process.env.NEXT_PUBLIC_SITE_URL)
+    : undefined,
   title: { default: "Weekly Football", template: "%s · Weekly Football" },
   description: "Запись на игру, команды и счёт для нашего еженедельного футбола.",
 };

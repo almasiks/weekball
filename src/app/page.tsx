@@ -11,8 +11,12 @@ import {
 import { GoogleLinkButton, GoogleSignInButton } from "@/components/google-auth";
 import { Notice } from "@/components/notice";
 import { SubmitButton } from "@/components/submit-button";
+import { GamePanel } from "@/components/game/game-panel";
+import { UpcomingGamesList } from "@/components/game/upcoming-games-list";
 import { signOutAction } from "@/lib/actions/auth";
+import { getGameView, getUpcomingGames } from "@/lib/games";
 import { getAppContext } from "@/lib/session";
+import { getSiteUrl } from "@/lib/site-url";
 import { cn } from "@/lib/utils";
 
 const AUTH_ERRORS: Record<string, string> = {
@@ -88,6 +92,13 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     );
   }
 
+  const [upcoming, siteUrl] = await Promise.all([
+    getUpcomingGames(ctx.group.id),
+    getSiteUrl(),
+  ]);
+  const [nextGame, ...laterGames] = upcoming;
+  const nextView = nextGame ? await getGameView(nextGame.id) : null;
+
   return (
     <div className="flex flex-col gap-4">
       {notices}
@@ -98,15 +109,45 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <h1 className="text-2xl font-bold tracking-tight">{ctx.group.name}</h1>
       </section>
 
-      <Card>
-        <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
-          <CalendarClock className="size-10 text-primary" aria-hidden />
-          <p className="font-medium">Ближайшая игра — скоро здесь</p>
-          <p className="text-sm text-muted-foreground">
-            Здесь появится запись на ближайшую игру.
-          </p>
-        </CardContent>
-      </Card>
+      {nextView ? (
+        <GamePanel
+          view={nextView}
+          userId={ctx.userId}
+          gameUrl={`${siteUrl}/game/${nextView.game.id}`}
+          linkToGame
+        />
+      ) : (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
+            <CalendarClock className="size-10 text-primary" aria-hidden />
+            <p className="font-medium">Ближайшей игры пока нет</p>
+            <p className="text-sm text-muted-foreground">
+              {ctx.role === "organizer"
+                ? "Настройте расписание или создайте разовую игру."
+                : "Как только организатор назначит игру, она появится здесь."}
+            </p>
+            {ctx.role === "organizer" && (
+              <Link
+                href="/admin/schedule"
+                className={cn(buttonVariants({ variant: "outline" }), "mt-2")}
+              >
+                Расписание и игры
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {laterGames.length > 0 && (
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle>Следующие игры</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <UpcomingGamesList games={laterGames} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card size="sm">
         <CardHeader>

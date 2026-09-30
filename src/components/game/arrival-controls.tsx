@@ -34,9 +34,9 @@ export function ArrivalControls({ gameId, arrival, lateMinutes }: Props) {
       className="flex flex-col gap-3 rounded-lg border p-3"
     >
       <div className="flex items-center justify-between gap-2">
-        <h3 id={`arrival-${gameId}`} className="font-medium">
+        <h2 id={`arrival-${gameId}`} className="font-medium">
           Я в пути
-        </h3>
+        </h2>
         <span className="text-sm text-muted-foreground">
           {arrival === "arrived" && "Вы на месте"}
           {arrival === "late" && `Опаздываете на ${lateMinutes} мин`}

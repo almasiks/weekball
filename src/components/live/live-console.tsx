@@ -85,8 +85,10 @@ export function LiveConsole(props: Props) {
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const refresh = useCallback(() => {
     clearTimeout(refreshTimer.current);
-    refreshTimer.current = setTimeout(() => router.refresh(), 200);
-  }, [router]);
+    // Never refresh offline or in the offline shell: Next would fall back to a full reload.
+    if (props.offline || !navigator.onLine) return;
+    refreshTimer.current = setTimeout(() => navigator.onLine && router.refresh(), 200);
+  }, [router, props.offline]);
   const outbox = useOutbox(gameId, refresh, props.matches);
 
   // Keep the last server state on this device so the console can reopen offline.
@@ -456,7 +458,7 @@ export function LiveConsole(props: Props) {
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(buttonVariants(), "w-full bg-[#128C7E] text-white hover:bg-[#0e7266]")}
+                className={cn(buttonVariants(), "w-full bg-[#075E54] text-white hover:bg-[#064c44]")}
               >
                 <MessageCircle aria-hidden />
                 Поделиться результатом

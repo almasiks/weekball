@@ -14,7 +14,10 @@ export function GameRealtime({ gameId }: { gameId: string }) {
     let cancelled = false;
     const refresh = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => router.refresh(), 50);
+      // Offline, a failed RSC refresh makes Next fall back to a full page reload
+      // (which would throw the organizer out of the console). Wait for "online".
+      if (!navigator.onLine) return;
+      timer = setTimeout(() => navigator.onLine && router.refresh(), 50);
     };
 
     const channel = supabase
@@ -57,11 +60,13 @@ export function GameRealtime({ gameId }: { gameId: string }) {
       if (document.visibilityState === "visible") refresh();
     };
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", refresh);
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", refresh);
       supabase.removeChannel(channel);
     };
   }, [gameId, router]);

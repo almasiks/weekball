@@ -16,7 +16,7 @@ export function ShareTeamsButton(props: Props) {
       href={whatsappUrl(teamsShareText(props))}
       target="_blank"
       rel="noopener noreferrer"
-      className={cn(buttonVariants(), "w-full bg-[#128C7E] text-white hover:bg-[#0e7266]")}
+      className={cn(buttonVariants(), "w-full bg-[#075E54] text-white hover:bg-[#064c44]")}
     >
       <MessageCircle aria-hidden />
       Поделиться составами в WhatsApp

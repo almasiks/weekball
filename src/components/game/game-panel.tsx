@@ -183,7 +183,7 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
           href={whatsappUrl(shareText)}
           target="_blank"
           rel="noopener noreferrer"
-          className={cn(buttonVariants(), "w-full bg-[#128C7E] text-white hover:bg-[#0e7266]")}
+          className={cn(buttonVariants(), "w-full bg-[#075E54] text-white hover:bg-[#064c44]")}
         >
           <MessageCircle aria-hidden />
           Поделиться в WhatsApp
@@ -206,9 +206,9 @@ function PlayerSection({
 }) {
   return (
     <section className="flex flex-col gap-1">
-      <h3 className="text-sm font-medium text-muted-foreground">
+      <h2 className="text-sm font-medium text-muted-foreground">
         {title} · {count}
-      </h3>
+      </h2>
       {count === 0 ? (
         <p className="py-3 text-sm text-muted-foreground">{empty}</p>
       ) : (

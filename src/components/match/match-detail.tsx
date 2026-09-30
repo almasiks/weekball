@@ -65,7 +65,7 @@ export function MatchDetail({ match, teams, events, names, shareUrl, offset: giv
         href={whatsappUrl(matchResultText({ match, teams, events: matchEvents, names, url: shareUrl }))}
         target="_blank"
         rel="noopener noreferrer"
-        className={cn(buttonVariants(), "w-full bg-[#128C7E] text-white hover:bg-[#0e7266]")}
+        className={cn(buttonVariants(), "w-full bg-[#075E54] text-white hover:bg-[#064c44]")}
       >
         <MessageCircle aria-hidden />
         Поделиться результатом

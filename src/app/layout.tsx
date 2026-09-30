@@ -3,9 +3,12 @@ import { Geist } from "next/font/google";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import "./globals.css";
 
+// display: optional — no late font swap (it delayed LCP on slow phones);
+// the system font is used until Geist is cached.
 const geistSans = Geist({
   variable: "--font-sans",
   subsets: ["latin", "cyrillic"],
+  display: "optional",
 });
 
 const DESCRIPTION = "Запись на игру, команды, live-счёт и статистика нашего еженедельного футбола.";

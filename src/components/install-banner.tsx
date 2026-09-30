@@ -71,9 +71,11 @@ export function InstallBanner() {
   if (hidden || (!prompt && !iosHint)) return null;
 
   return (
+    // Floating above the bottom navigation: it appears after load, so it must not
+    // push the page content (layout shift).
     <aside
       aria-label="Установка приложения"
-      className="mb-4 flex items-center gap-3 rounded-xl border bg-card p-3 text-sm"
+      className="fixed inset-x-3 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-md items-center gap-3 rounded-xl border bg-card p-3 text-sm shadow-lg"
     >
       <span aria-hidden className="text-2xl">⚽</span>
       <div className="min-w-0 flex-1">

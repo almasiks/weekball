@@ -37,9 +37,34 @@ npm run lint && npm run typecheck && npm run build
 ## Деплой на Vercel
 
 1. Импортировать репозиторий GitHub в Vercel (фреймворк определится как Next.js).
-2. В **Settings → Environment Variables** задать `NEXT_PUBLIC_SUPABASE_URL`,
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL` (адрес продакшена без `/` в конце).
+2. В **Settings → Environment Variables** задать:
+
+   | Переменная | Где взять | Видна в браузере |
+   | --- | --- | --- |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API | да |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | там же, anon / publishable key | да |
+   | `NEXT_PUBLIC_SITE_URL` | адрес продакшена без `/` в конце | да |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → `service_role` (secret) | **нет**, только сервер |
+   | `CRON_SECRET` | любая длинная случайная строка, например `openssl rand -hex 32` | **нет** |
+
+   `SUPABASE_SERVICE_ROLE_KEY` обходит RLS — используется только в `/api/cron/create-next`
+   и для превью ссылок. Никогда не добавлять ему префикс `NEXT_PUBLIC_`.
 3. Задеплоить. После первого деплоя проверить, что адрес Vercel добавлен в Redirect URLs Supabase.
+
+## Cron: создание игр по расписанию
+
+`vercel.json` запускает `GET /api/cron/create-next` раз в сутки (`0 3 * * *` UTC = 08:00 в Алматы).
+Vercel сам добавляет заголовок `Authorization: Bearer $CRON_SECRET`. Задача создаёт игры
+по всем активным расписаниям на 2 недели вперёд; повторный запуск дублей не создаёт.
+На тарифе Hobby cron работает не чаще раза в сутки и с точностью до часа, поэтому по нему
+делается только создание игр. Закрытие записи и отмена — вручную организатором.
+
+Проверить вручную:
+
+```bash
+curl -i https://<app>.vercel.app/api/cron/create-next -H "Authorization: Bearer <CRON_SECRET>"
+# 200 {"created":N,"daysAhead":14}; без заголовка — 401
+```
 
 ## Структура
 

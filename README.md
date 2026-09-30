@@ -1,105 +1,138 @@
-# Weekly Football
+# Weekly Football ⚽
 
-PWA для еженедельной игры в футбол: запись на игру, деление на команды, live-счёт и статистика.
-Полное ТЗ — `docs/TZ.md`, контекст для разработки — `CLAUDE.md`.
+Приложение (PWA) для нашей еженедельной игры в футбол: 15–20 человек, обычно суббота 19:00,
+общение в WhatsApp.
 
-Стек: Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · shadcn/ui · Supabase (Postgres, Auth, RLS) · Vercel.
+- Игроки отмечаются «Иду / Не иду», есть лист ожидания, «Опаздываю / Я на месте».
+- Организатор за пару минут делит записавшихся на команды (авто, драфт, вручную),
+  докидывает опоздавших одним тапом.
+- Матч ведётся с телефона: таймер, голы в 2 тапа, карточки, работает без интернета.
+- Зрители видят счёт в реальном времени, гости — по публичной ссылке.
+- Статистика, рейтинг, история игр копятся сами.
+
+Руководство для игроков и организатора — [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md).
+Контекст для разработки и принятые решения — [`CLAUDE.md`](CLAUDE.md).
+
+**Стек:** Next.js 16 (App Router, Turbopack) · TypeScript · Tailwind CSS 4 · shadcn/ui (Base UI) ·
+dnd-kit · Supabase (Postgres, Auth, Realtime, RLS) · Serwist (service worker) · Vercel.
+
+---
+
+## Переменные окружения
+
+| Переменная | Где взять | В браузере |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API | да |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | там же: anon / publishable key | да |
+| `NEXT_PUBLIC_SITE_URL` | адрес сайта без `/` в конце (`http://localhost:3000` или `https://<app>.vercel.app`) | да |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → `service_role` / secret key | **нет** |
+| `CRON_SECRET` | любая длинная случайная строка (`openssl rand -hex 32`) | **нет** |
+
+`SUPABASE_SERVICE_ROLE_KEY` обходит RLS. Используется только на сервере: cron-задачи и превью ссылок.
+Никогда не давать ему префикс `NEXT_PUBLIC_`. CI проверяет, что он не попал в клиентский бандл.
+
+Шаблон — `.env.example`. Локальные значения — в `.env.local` (в git не попадает).
 
 ## Локальный запуск
 
+Нужны Node 24 и Docker Desktop.
+
 ```bash
 npm install
-cp .env.example .env.local   # заполнить значения из Supabase
-npx supabase login
-npx supabase link --project-ref <project-ref>
-npx supabase db push         # применить миграции из supabase/migrations
-npm run dev                  # http://localhost:3000
+npx supabase start               # локальный Supabase; миграции применятся сами
+npx supabase status -o env       # API_URL, ANON_KEY, SERVICE_ROLE_KEY → в .env.local
+npm run dev                      # http://localhost:3000
 ```
 
-Проверки перед коммитом:
+Тестовые игроки (только для локального Supabase):
 
 ```bash
-npm test && npm run lint && npm run typecheck && npm run build
+npm run seed:players -- 18 ABCD2345   # 18 игроков с уровнями/позициями → в группу с этим кодом, на ближайшую игру
+npm run seed:clean                    # удалить всех тестовых игроков
 ```
 
-`npm test` — unit-тесты (Vitest): деление на команды (`src/lib/teams/balance.ts`),
-таймер матча, счёт и таблица, офлайн-очередь событий (`src/lib/match/*`).
+Service worker работает только в production-сборке: `npm run build && npm run start`.
 
-## Как устроен матч (Фаза 4)
+## Тесты
 
-- Организатор ведёт игру на `/game/<id>/live`: таймер, голы (2 тапа), карточки, замены, отмена.
-- Таймер хранится как временные метки, каждое устройство считает время само — не сбивается
-  при блокировке экрана и перезагрузке.
-- Действия сначала пишутся в локальную очередь (IndexedDB) и отправляются, когда есть сеть.
-  Пока страница открыта, матч можно вести без интернета. (Открыть страницу заново без сети
-  можно будет после Фазы 5 — PWA.)
-- Зрители смотрят `/game/<id>` и `/match/<id>` (Realtime), гости без входа — `/live/<token>`
-  (ссылку включает организатор, обновление раз в 5 с).
+| Команда | Что проверяет | Где запускать |
+| --- | --- | --- |
+| `npm test` | Vitest: деление на команды, рейтинг (Elo), `playerStrength`, таймер, счёт и таблица, офлайн-очередь | везде, CI |
+| `npm run lint`, `npm run typecheck` | ESLint, TypeScript (включая service worker) | везде, CI |
+| `npx supabase test db` | pgTAP: RLS на всех таблицах, права игрока/организатора, запись и лист ожидания, триггер счёта (гол, автогол, аннулирование), `game_standings`, представления статистики | локально (нужен `supabase start`) |
+| `npm run test:e2e` | Playwright: вход по ссылке и запись; сборка и публикация команд; матч целиком (включая гол без сети); повторное открытие консоли матча без сети (PWA) | локально: `supabase start` + `npm run build && npm run start` |
 
-### Локальный Supabase и тестовые игроки
+CI (GitHub Actions, `.github/workflows/ci.yml`) на каждый push и pull request:
+`lint`, `typecheck`, `npm test`, `build` и проверка, что ключ service role не попал в клиентский код.
 
-```bash
-npx supabase start            # нужен запущенный Docker Desktop; миграции применятся сами
-npx supabase status -o env    # URL и ключи для .env.local
-npm run seed:players -- 18    # 18 тестовых игроков с уровнями и позициями → на ближайшую игру
-npm run seed:players -- 18 ABCD2345   # в конкретную группу (по коду приглашения)
-npm run seed:clean            # удалить всех тестовых игроков
-```
+## Деплой
 
-Скрипт `scripts/seed-test-players.ts` работает только с локальным Supabase
-(127.0.0.1 / localhost) и нужен `SUPABASE_SERVICE_ROLE_KEY` в `.env.local`.
+### 1. Supabase (один раз)
 
-## Настройка Supabase (один раз)
-
-1. **Authentication → Sign In / Providers**
-   - включить **Allow anonymous sign-ins**;
-   - включить **Allow manual linking** (нужно для привязки Google к анонимному профилю);
-   - включить провайдер **Google**, вставить Client ID и Client Secret из Google Cloud.
-2. **Authentication → URL Configuration**
-   - Site URL: адрес продакшена (`https://<app>.vercel.app`);
-   - Redirect URLs: `http://localhost:3000/auth/callback`, `https://<app>.vercel.app/auth/callback`.
-3. В Google Cloud (OAuth client, тип Web application) в **Authorized redirect URIs** добавить
+1. Создать проект на supabase.com.
+2. Применить миграции:
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <project-ref>
+   npx supabase db push
+   ```
+3. **Authentication → Sign In / Providers:** включить **Allow anonymous sign-ins**,
+   **Allow manual linking** и провайдер **Google** (Client ID и Secret из Google Cloud).
+4. **Authentication → URL Configuration:** Site URL = адрес продакшена;
+   Redirect URLs = `https://<app>.vercel.app/auth/callback` и `http://localhost:3000/auth/callback`.
+5. Google Cloud → OAuth client (Web application) → Authorized redirect URIs:
    `https://<project-ref>.supabase.co/auth/v1/callback`.
 
-## Деплой на Vercel
+### 2. Vercel
 
-1. Импортировать репозиторий GitHub в Vercel (фреймворк определится как Next.js).
-2. В **Settings → Environment Variables** задать:
+1. Импортировать репозиторий GitHub (фреймворк Next.js определится сам).
+2. **Settings → Environment Variables:** все 5 переменных из таблицы выше.
+3. Deploy. Каждый push в `main` деплоится автоматически.
 
-   | Переменная | Где взять | Видна в браузере |
-   | --- | --- | --- |
-   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API | да |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | там же, anon / publishable key | да |
-   | `NEXT_PUBLIC_SITE_URL` | адрес продакшена без `/` в конце | да |
-   | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → `service_role` (secret) | **нет**, только сервер |
-   | `CRON_SECRET` | любая длинная случайная строка, например `openssl rand -hex 32` | **нет** |
+## Cron-задачи (`vercel.json`)
 
-   `SUPABASE_SERVICE_ROLE_KEY` обходит RLS — используется только в `/api/cron/create-next`
-   и для превью ссылок. Никогда не добавлять ему префикс `NEXT_PUBLIC_`.
-3. Задеплоить. После первого деплоя проверить, что адрес Vercel добавлен в Redirect URLs Supabase.
+| Путь | Когда (UTC) | Что делает |
+| --- | --- | --- |
+| `GET /api/cron/create-next` | `0 3 * * *` (08:00 Алматы) | создаёт игры по активным расписаниям на 2 недели вперёд, без дублей |
+| `GET /api/cron/recalc` | `30 3 * * *` | страховка: пересчитывает рейтинг для завершённых игр, которые ещё не обработаны |
 
-## Cron: создание игр по расписанию
-
-`vercel.json` запускает `GET /api/cron/create-next` раз в сутки (`0 3 * * *` UTC = 08:00 в Алматы).
-Vercel сам добавляет заголовок `Authorization: Bearer $CRON_SECRET`. Задача создаёт игры
-по всем активным расписаниям на 2 недели вперёд; повторный запуск дублей не создаёт.
-На тарифе Hobby cron работает не чаще раза в сутки и с точностью до часа, поэтому по нему
-делается только создание игр. Закрытие записи и отмена — вручную организатором.
+Обе задачи защищены заголовком `Authorization: Bearer $CRON_SECRET` (Vercel добавляет его сам).
+На тарифе Hobby cron запускается раз в сутки и без точного времени, поэтому ничего,
+что зависит от точного времени, по cron не делается. Основной пересчёт статистики идёт сразу
+по кнопке «Завершить игру» (`POST /api/games/<id>/finalize`).
 
 Проверить вручную:
 
 ```bash
 curl -i https://<app>.vercel.app/api/cron/create-next -H "Authorization: Bearer <CRON_SECRET>"
-# 200 {"created":N,"daysAhead":14}; без заголовка — 401
+curl -i https://<app>.vercel.app/api/cron/recalc      -H "Authorization: Bearer <CRON_SECRET>"
+# без заголовка — 401
 ```
+
+## Чеклист первого запуска
+
+1. Организатор открывает сайт, создаёт группу и расписание («Суббота, 19:00, лимит 20»).
+2. Разослать ссылку-приглашение в чат WhatsApp (кнопка «Поделиться в WhatsApp» в разделе «Админ»).
+3. Попросить игроков открыть ссылку с телефона, ввести имя, нажать «Установить приложение»
+   (на iPhone: «Поделиться» → «На экран „Домой“») и привязать Google в профиле.
+4. Организатор ставит игрокам уровни 1–5 в «Участниках» — от этого зависит авто-деление.
+5. Провести пробную игру: разделить на команды, открыть «Вести матч», записать пару голов,
+   «Завершить игру» → проверить статистику и рейтинг в разделе «Статистика».
+6. Проверить на телефоне организатора работу без сети: открыть страницу матча, включить режим
+   полёта, записать гол, вернуть сеть — «Синхронизировано».
 
 ## Структура
 
 ```
-src/app/            страницы и роуты (App Router)
-src/components/     UI-компоненты (ui/ — shadcn)
-src/lib/supabase/   клиенты Supabase (browser, server, middleware) и типы БД
-src/lib/actions/    server actions (группы, вход)
-src/proxy.ts        обновление сессии Supabase на каждом запросе (бывший middleware)
-supabase/migrations SQL-миграции — единственный способ менять схему
+src/app/(app)/        страницы приложения (layout с сессией, шапкой и навигацией)
+src/app/(shell)/      статические офлайн-страницы (кэшируются service worker'ом)
+src/app/api/          cron и служебные роуты
+src/components/       UI (ui/ — shadcn)
+src/lib/teams/        деление на команды, сила игрока, палитра
+src/lib/match/        таймер, счёт, офлайн-очередь, Realtime-хуки
+src/lib/rating/       Elo и пересчёт истории
+src/sw.ts             service worker (Serwist)
+supabase/migrations/  SQL-миграции — единственный способ менять схему
+supabase/tests/       pgTAP-тесты
+e2e/                  Playwright
 ```

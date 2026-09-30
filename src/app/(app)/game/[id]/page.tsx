@@ -114,6 +114,16 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
         </Link>
       )}
 
+      {isOrganizer && view.game.status === "finished" && (
+        <Link
+          href={`/game/${id}/live`}
+          className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+        >
+          <Timer aria-hidden />
+          Исправить события
+        </Link>
+      )}
+
       {isOrganizer && view.game.status === "finished" && !view.game.stats_processed_at && (
         <Notice variant="error">
           <div className="flex flex-col gap-2">

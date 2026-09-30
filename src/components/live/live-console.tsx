@@ -482,7 +482,8 @@ export function LiveConsole(props: Props) {
               teams={teams}
               names={names}
               pendingIds={pendingEventIds}
-              onVoid={gameFinished ? undefined : (e) => setPicker({ step: "void", event: e })}
+              // Also after the game: corrections (the game page then offers "Пересчитать").
+              onVoid={(e) => setPicker({ step: "void", event: e })}
             />
           </CardContent>
         </Card>

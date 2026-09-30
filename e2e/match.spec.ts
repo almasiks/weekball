@@ -80,4 +80,17 @@ test("organizer runs a match (incl. offline goal), stats appear after finishing"
   await expect(organizer.locator("tbody tr")).toHaveCount(1);
   await organizer.goto("/stats?tab=rating");
   await expect(organizer.locator("tbody tr")).toHaveCount(2);
+
+  // Correction after the game: void the goal, recalculate -> gone from the stats.
+  await organizer.goto(gameUrl);
+  await organizer.getByRole("link", { name: "Исправить события" }).click();
+  await organizer.getByRole("button", { name: /^Отменить: / }).first().click();
+  await organizer.getByRole("dialog").getByRole("button", { name: "Отменить" }).click();
+  await expect(organizer.getByText("Синхронизировано")).toBeVisible();
+  await organizer.goto(gameUrl);
+  await expect(organizer.getByText("Статистика и рейтинги по этой игре не обновлены.")).toBeVisible();
+  await organizer.getByRole("button", { name: "Пересчитать" }).click();
+  await expect(organizer.getByText("Статистика и рейтинги по этой игре не обновлены.")).toHaveCount(0);
+  await organizer.goto("/stats?tab=scorers");
+  await expect(organizer.getByText("Голов пока нет.")).toBeVisible();
 });

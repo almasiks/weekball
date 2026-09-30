@@ -138,7 +138,8 @@ export function balanceTeams(input: BalanceInput): BalanceResult {
     const target = candidates.reduce((best, i) => {
       const bySum = sum(i) - sum(best);
       if (bySum !== 0) return bySum < 0 ? i : best;
-      const byPos = count(i, player.position) - count(best, player.position);
+      // Unknown position: not taken into account.
+      const byPos = player.position ? count(i, player.position) - count(best, player.position) : 0;
       if (byPos !== 0) return byPos < 0 ? i : best;
       return teams[i].length < teams[best].length ? i : best;
     });

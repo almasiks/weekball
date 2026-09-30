@@ -107,6 +107,19 @@ describe("balanceTeams", () => {
     expect(signatures.size).toBeGreaterThan(3);
   });
 
+  it("works when nobody has a position (positions are simply ignored)", () => {
+    const players = squad(18).map((p) => ({ ...p, position: null }));
+    for (const teamCount of [2, 3]) {
+      for (let seed = 1; seed <= 20; seed++) {
+        const { teams, strengths } = balanceTeams({ players, teamCount, seed });
+        const sizes = teams.map((t) => t.length);
+        expect(Math.max(...sizes) - Math.min(...sizes)).toBeLessThanOrEqual(1);
+        expect(teams.flat()).toHaveLength(18);
+        expect(strengthGapPercent(strengths)).toBeLessThanOrEqual(10);
+      }
+    }
+  });
+
   it("handles fewer players than teams without crashing", () => {
     const { teams } = balanceTeams({ players: squad(2), teamCount: 3 });
     expect(teams.flat()).toHaveLength(2);

@@ -4,16 +4,9 @@ import { useState, useTransition } from "react";
 import { Plus, Shuffle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/notice";
 import { selectClassName } from "@/components/schedule/schedule-form";
-import {
-  createMatchAction,
-  deleteMatchAction,
-  generateRoundRobinAction,
-  updateMatchSettingsAction,
-} from "@/lib/actions/matches";
+import { createMatchAction, deleteMatchAction, generateRoundRobinAction } from "@/lib/actions/matches";
 import type { LiveMatch, LiveTeam } from "@/lib/match/types";
 import { statusLabel } from "@/components/match/scoreboard";
 import { teamColor } from "@/lib/teams/colors";
@@ -25,75 +18,19 @@ type Props = {
   matches: LiveMatch[];
   currentId: string | null;
   onSelect: (id: string) => void;
+  // "до 2 голов · 7 мин" — the game format every new match gets.
+  formatText: string;
   disabled?: boolean;
 };
 
-function Settings({
-  periods,
-  minutes,
-  onPeriods,
-  onMinutes,
-  idPrefix,
-}: {
-  periods: number;
-  minutes: number;
-  onPeriods: (v: number) => void;
-  onMinutes: (v: number) => void;
-  idPrefix: string;
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-periods`}>Таймов</Label>
-        <select
-          id={`${idPrefix}-periods`}
-          className={selectClassName}
-          value={periods}
-          onChange={(e) => onPeriods(Number(e.target.value))}
-        >
-          {[1, 2, 3, 4].map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-minutes`}>Минут в тайме</Label>
-        <Input
-          id={`${idPrefix}-minutes`}
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={60}
-          value={minutes}
-          onChange={(e) => onMinutes(Number(e.target.value))}
-        />
-      </div>
-    </div>
-  );
-}
-
-export function MatchSetup({ gameId, teams, matches, currentId, onSelect, disabled }: Props) {
+export function MatchSetup({ gameId, teams, matches, currentId, onSelect, formatText, disabled }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [periods, setPeriods] = useState(2);
-  const [minutes, setMinutes] = useState(20);
   const [adding, setAdding] = useState(false);
   const [teamA, setTeamA] = useState(teams[0]?.id ?? "");
   const [teamB, setTeamB] = useState(teams[1]?.id ?? "");
   const current = matches.find((m) => m.id === currentId);
-  const [editPeriods, setEditPeriods] = useState(current?.periods ?? 2);
-  const [editMinutes, setEditMinutes] = useState(Math.round((current?.period_seconds ?? 1200) / 60));
-  const [editingFor, setEditingFor] = useState(current?.id);
   const teamById = new Map(teams.map((t) => [t.id, t]));
-
-  // Reset the settings editor when another match is selected.
-  if (current && editingFor !== current.id) {
-    setEditingFor(current.id);
-    setEditPeriods(current.periods);
-    setEditMinutes(Math.round(current.period_seconds / 60));
-  }
 
   function run(fn: () => Promise<{ error?: string }>, after?: () => void) {
     setError(null);
@@ -108,8 +45,6 @@ export function MatchSetup({ gameId, teams, matches, currentId, onSelect, disabl
     return <Notice>Сначала разделите игроков хотя бы на 2 команды.</Notice>;
   }
 
-  const seconds = (m: number) => Math.round(Math.min(60, Math.max(1, m || 1)) * 60);
-
   return (
     <Card size="sm">
       <CardHeader>
@@ -118,17 +53,11 @@ export function MatchSetup({ gameId, teams, matches, currentId, onSelect, disabl
       <CardContent className="flex flex-col gap-3">
         {matches.length === 0 ? (
           <>
-            <Settings
-              periods={periods}
-              minutes={minutes}
-              onPeriods={setPeriods}
-              onMinutes={setMinutes}
-              idPrefix="new"
-            />
+            <p className="text-sm text-muted-foreground">Формат: {formatText}. Изменить можно на странице игры.</p>
             <Button
               size="lg"
               disabled={pending || disabled}
-              onClick={() => run(() => generateRoundRobinAction(gameId, periods, seconds(minutes)))}
+              onClick={() => run(() => generateRoundRobinAction(gameId))}
             >
               <Shuffle aria-hidden />
               {teams.length === 2 ? "Создать матч" : `Сгенерировать матчи (${(teams.length * (teams.length - 1)) / 2})`}
@@ -165,55 +94,33 @@ export function MatchSetup({ gameId, teams, matches, currentId, onSelect, disabl
         )}
 
         {current?.status === "scheduled" && !disabled && (
-          <div className="flex flex-col gap-2 rounded-lg border p-3">
-            <p className="text-sm font-medium">Настройки матча</p>
-            <Settings
-              periods={editPeriods}
-              minutes={editMinutes}
-              onPeriods={setEditPeriods}
-              onMinutes={setEditMinutes}
-              idPrefix="edit"
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="ghost"
-                className="text-destructive"
-                disabled={pending}
-                onClick={() => run(() => deleteMatchAction(gameId, current.id))}
-              >
-                <Trash2 aria-hidden />
-                Удалить
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={
-                  pending ||
-                  (editPeriods === current.periods && seconds(editMinutes) === current.period_seconds)
-                }
-                onClick={() =>
-                  run(() => updateMatchSettingsAction(gameId, current.id, editPeriods, seconds(editMinutes)))
-                }
-              >
-                Сохранить
-              </Button>
-            </div>
-          </div>
+          <Button
+            variant="ghost"
+            className="text-destructive"
+            disabled={pending}
+            onClick={() => run(() => deleteMatchAction(gameId, current.id))}
+          >
+            <Trash2 aria-hidden />
+            Удалить этот матч
+          </Button>
         )}
 
         {matches.length > 0 && !disabled && (
           adding ? (
             <div className="flex flex-col gap-2 rounded-lg border p-3">
               <div className="grid grid-cols-2 gap-2">
-                {[
-                  [teamA, setTeamA, "Команда 1"],
-                  [teamB, setTeamB, "Команда 2"],
-                ].map(([value, setter, label]) => (
+                {(
+                  [
+                    [teamA, setTeamA, "Команда 1"],
+                    [teamB, setTeamB, "Команда 2"],
+                  ] as const
+                ).map(([value, setter, label]) => (
                   <select
-                    key={label as string}
-                    aria-label={label as string}
+                    key={label}
+                    aria-label={label}
                     className={selectClassName}
-                    value={value as string}
-                    onChange={(e) => (setter as (v: string) => void)(e.target.value)}
+                    value={value}
+                    onChange={(e) => setter(e.target.value)}
                   >
                     {teams.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -223,16 +130,13 @@ export function MatchSetup({ gameId, teams, matches, currentId, onSelect, disabl
                   </select>
                 ))}
               </div>
-              <Settings periods={periods} minutes={minutes} onPeriods={setPeriods} onMinutes={setMinutes} idPrefix="add" />
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" onClick={() => setAdding(false)}>
                   Отмена
                 </Button>
                 <Button
                   disabled={pending || teamA === teamB}
-                  onClick={() =>
-                    run(() => createMatchAction(gameId, teamA, teamB, periods, seconds(minutes)), () => setAdding(false))
-                  }
+                  onClick={() => run(() => createMatchAction(gameId, teamA, teamB), () => setAdding(false))}
                 >
                   Добавить
                 </Button>

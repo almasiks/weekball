@@ -44,7 +44,7 @@ async function sendItem(supabase: ReturnType<typeof createClient>, item: QueueIt
               ? await supabase.rpc("timer_break", { ...base, p_period: cmd.period })
               : cmd.kind === "next_period"
                 ? await supabase.rpc("timer_next_period", { ...base, p_period: cmd.period })
-                : await supabase.rpc("finish_match", base));
+                : await supabase.rpc("finish_match", { ...base, p_reason: cmd.reason ?? "manual" }));
   }
   if (!error) return { ok: true };
   return { ok: false, retry: shouldRetry(error), error: toMessage(error) };

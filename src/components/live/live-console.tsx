@@ -25,9 +25,18 @@ import { StandingsTable } from "@/components/match/standings-table";
 import { MatchSetup } from "@/components/live/match-setup";
 import { signalTimeUp, useNow, useServerOffset, useWakeLock } from "@/lib/match/hooks";
 import { useOutbox } from "@/lib/match/use-outbox";
-import { saveSnapshot } from "@/lib/match/snapshot";
+import { saveSnapshot, type LiveSnapshot } from "@/lib/match/snapshot";
 import { applyTimerCommand, computeElapsed, type TimerCommand } from "@/lib/match/timer";
 import { computeScore, computeStandings } from "@/lib/match/score";
+import {
+  applyGoalLimit,
+  DEFAULT_MATCH_MINUTES,
+  finishReasonLabel,
+  formatLabel,
+  matchFormatLabel,
+  timeUpAt,
+} from "@/lib/match/format";
+import { NextMatchPicker } from "@/components/live/next-match-picker";
 import type { EventPayload, QueueItem } from "@/lib/match/queue";
 import type { EventType, LiveEvent, LiveMatch, LiveTeam } from "@/lib/match/types";
 import { finishGameAction, reopenMatchAction } from "@/lib/actions/matches";
@@ -48,7 +57,7 @@ type Props = {
   events: LiveEvent[];
   names: Record<string, string>;
   siteUrl: string;
-  meta: { startsAt: string; timezone: string; place: string };
+  meta: LiveSnapshot["meta"];
   // Offline shell: opened from the IndexedDB snapshot, no server actions / links.
   offline?: boolean;
   initialOffset?: number;
@@ -110,6 +119,7 @@ export function LiveConsole(props: Props) {
   const { matches, events } = useMemo(() => {
     let ms = props.matches;
     let es = props.events;
+    const voidedAt = new Map<string, number>();
     for (const item of outbox.overlay) {
       if (item.kind === "timer") {
         ms = ms.map((m) =>
@@ -119,14 +129,22 @@ export function LiveConsole(props: Props) {
         if (!es.some((e) => e.id === item.payload.id)) es = [...es, item.payload];
       } else {
         es = es.filter((e) => e.id !== item.eventId);
+        voidedAt.set(item.eventId, item.createdAt);
       }
     }
     ms = ms.map((m) => {
       const s = computeScore(m, es);
-      return { ...m, score_a: s.a, score_b: s.b };
+      // Goal limit, like the database: the winning goal ends the match; undoing it reopens it
+      // (clock running again from the moment of the undo).
+      const reopenAt = m.finish_event_id ? voidedAt.get(m.finish_event_id) : undefined;
+      return applyGoalLimit(
+        { ...m, score_a: s.a, score_b: s.b },
+        es,
+        reopenAt ? new Date(reopenAt + offset).toISOString() : null,
+      );
     });
     return { matches: ms, events: es };
-  }, [props.matches, props.events, outbox.overlay]);
+  }, [props.matches, props.events, outbox.overlay, offset]);
 
   const pendingEventIds = useMemo(
     () => new Set(outbox.pending.filter((i) => i.kind === "event").map((i) => i.id)),
@@ -142,6 +160,7 @@ export function LiveConsole(props: Props) {
     matches.find((m) => m.status === "scheduled") ??
     matches[matches.length - 1];
   const inPlay = current && (current.status === "live" || current.status === "break");
+  const gameFinished = props.gameStatus === "finished";
   const elapsed = current ? computeElapsed(current, now, offset) : null;
 
   const wakeLockSupported = useWakeLock(!!liveMatch);
@@ -156,6 +175,26 @@ export function LiveConsole(props: Props) {
     // Don't buzz for a period that was already over when the page loaded.
     if (elapsed.overtimeMs < 5000) signalTimeUp();
   }, [current, elapsed?.isOvertime, elapsed?.overtimeMs]);
+
+  // --- Time is up: the match finishes by itself (a draw if level), stamped with
+  // the exact moment the clock reached the match length.
+  const { enqueue } = outbox;
+  const timeFinished = useRef(new Set<string>());
+  useEffect(() => {
+    if (!liveMatch || gameFinished) return;
+    const at = timeUpAt(liveMatch);
+    if (at === null || now + offset < at || timeFinished.current.has(liveMatch.id)) return;
+    timeFinished.current.add(liveMatch.id);
+    enqueue({
+      id: crypto.randomUUID(),
+      kind: "timer",
+      matchId: liveMatch.id,
+      command: { kind: "finish", reason: "time" },
+      clientTs: new Date(at).toISOString(),
+      createdAt: clock(),
+      status: "pending",
+    });
+  }, [liveMatch, now, offset, gameFinished, enqueue]);
 
   // The assist sheet closes by itself when its window ends (the goal is sent without an assist).
   const assistOpen = picker?.step === "assist" && now <= picker.until;
@@ -249,6 +288,9 @@ export function LiveConsole(props: Props) {
   }
 
   const currentEvents = current ? events.filter((e) => e.match_id === current.id) : [];
+  const winningGoal = current?.finish_event_id
+    ? currentEvents.find((e) => e.id === current.finish_event_id)
+    : undefined;
   // "Last" = most recently recorded: queued ones first (newest last), else latest by time.
   const lastEvent =
     [...outbox.overlay].reverse().find(
@@ -272,7 +314,6 @@ export function LiveConsole(props: Props) {
   const standings = computeStandings(teams, matches);
   const anyLive = !!liveMatch;
   const anyFinished = matches.some((m) => m.status === "finished");
-  const gameFinished = props.gameStatus === "finished";
 
   function runAction(fn: () => Promise<{ error?: string }>, after?: () => void) {
     setActionError(null);
@@ -319,6 +360,7 @@ export function LiveConsole(props: Props) {
         matches={matches}
         currentId={current?.id ?? null}
         onSelect={setSelectedId}
+        formatText={formatLabel(props.meta.goalLimit, props.meta.matchMinutes ?? DEFAULT_MATCH_MINUTES)}
         disabled={gameFinished}
       />
 
@@ -332,6 +374,7 @@ export function LiveConsole(props: Props) {
               scoreB={current.score_b}
               offset={offset}
               big
+              note={matchFormatLabel(current)}
             />
 
             {/* Timer controls */}
@@ -349,32 +392,36 @@ export function LiveConsole(props: Props) {
                   </Button>
                 )}
                 {current.status === "live" && current.timer_status === "running" && (
-                  <Button size="lg" variant="secondary" className="h-16 text-lg" onClick={() => timer({ kind: "pause" })}>
+                  <Button size="lg" variant="secondary" className="h-16 text-base" onClick={() => timer({ kind: "pause" })}>
                     <Pause aria-hidden />
                     Пауза
                   </Button>
                 )}
                 {current.status === "live" && current.timer_status === "paused" && (
-                  <Button size="lg" className="h-16 text-lg" onClick={() => timer({ kind: "resume" })}>
+                  <Button size="lg" className="h-16 text-base" onClick={() => timer({ kind: "resume" })}>
                     <Play aria-hidden />
                     Продолжить
                   </Button>
                 )}
-                {current.status === "live" && current.period < current.periods && (
+                {(current.status === "live" || current.status === "break") && (
                   <Button
                     size="lg"
                     variant="outline"
-                    className="h-16 text-lg"
+                    className={cn("h-16 text-base", current.status === "break" && "col-span-2")}
+                    onClick={() => setConfirmFinish("match")}
+                  >
+                    <Flag aria-hidden />
+                    Завершить матч
+                  </Button>
+                )}
+                {current.status === "live" && current.period < current.periods && (
+                  <Button
+                    variant="ghost"
+                    className="col-span-2"
                     onClick={() => timer({ kind: "break", period: current.period })}
                   >
                     <SkipForward aria-hidden />
                     Перерыв
-                  </Button>
-                )}
-                {current.status === "live" && current.period >= current.periods && (
-                  <Button size="lg" variant="outline" className="h-16 text-lg" onClick={() => setConfirmFinish("match")}>
-                    <Flag aria-hidden />
-                    Завершить
                   </Button>
                 )}
                 {current.status === "break" && (
@@ -388,15 +435,38 @@ export function LiveConsole(props: Props) {
                   </Button>
                 )}
                 {current.status === "finished" && (
-                  <Button
-                    variant="outline"
-                    className="col-span-2"
-                    disabled={pendingAction || anyLive}
-                    onClick={() => runAction(() => reopenMatchAction(gameId, current.id))}
-                  >
-                    <RotateCcw aria-hidden />
-                    Вернуть матч (отменить завершение)
-                  </Button>
+                  <div className="col-span-2 flex flex-col gap-2">
+                    <p className="rounded-lg bg-muted/60 px-3 py-2 text-center text-sm font-medium" role="status">
+                      Матч завершён
+                      {finishReasonLabel(current.finish_reason) && ` · ${finishReasonLabel(current.finish_reason)}`}
+                      {current.score_a === current.score_b && " · ничья"}
+                    </p>
+                    {current.finish_reason === "goal_limit" && winningGoal && (
+                      <Button size="lg" variant="secondary" onClick={() => voidEvent(winningGoal)}>
+                        <Undo2 aria-hidden />
+                        Отменить последний гол
+                      </Button>
+                    )}
+                    {!anyLive && (
+                      <NextMatchPicker
+                        gameId={gameId}
+                        teams={teams}
+                        lastMatch={current}
+                        onCreated={setSelectedId}
+                      />
+                    )}
+                    {current.finish_reason !== "goal_limit" && (
+                      <Button
+                        variant="ghost"
+                        className="text-sm text-muted-foreground"
+                        disabled={pendingAction || anyLive}
+                        onClick={() => runAction(() => reopenMatchAction(gameId, current.id))}
+                      >
+                        <RotateCcw aria-hidden />
+                        Вернуть матч (отменить завершение)
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -423,16 +493,16 @@ export function LiveConsole(props: Props) {
                       </Button>
                       <span className="truncate text-center text-xs text-muted-foreground">{team?.name}</span>
                       <div className="grid grid-cols-2 gap-1.5">
-                        <Button variant="outline" className="px-1 text-sm" onClick={() => setPicker({ step: "player", type: "own_goal", teamId })}>
+                        <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "own_goal", teamId })}>
                           Автогол
                         </Button>
-                        <Button variant="outline" className="px-1 text-sm" onClick={() => setPicker({ step: "player", type: "sub", teamId })}>
+                        <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "sub", teamId })}>
                           🔄 Замена
                         </Button>
-                        <Button variant="outline" className="px-1 text-sm" onClick={() => setPicker({ step: "player", type: "yellow", teamId })}>
+                        <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "yellow", teamId })}>
                           🟨 Жёлтая
                         </Button>
-                        <Button variant="outline" className="px-1 text-sm" onClick={() => setPicker({ step: "player", type: "red", teamId })}>
+                        <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "red", teamId })}>
                           🟥 Красная
                         </Button>
                       </div>

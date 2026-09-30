@@ -8,6 +8,7 @@ import { WEEKDAYS, formatTime } from "@/lib/datetime";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/notice";
+import { FormatFields } from "@/components/format-fields";
 import { SubmitButton } from "@/components/submit-button";
 
 export const selectClassName =
@@ -82,6 +83,11 @@ export function ScheduleForm({ schedule, onSaved }: Props) {
           defaultValue={schedule?.max_players ?? 20}
         />
       </div>
+      <FormatFields
+        idPrefix={idPrefix}
+        goalLimit={schedule ? schedule.goal_limit : undefined}
+        matchMinutes={schedule?.match_minutes}
+      />
       {state.error && <Notice variant="error">{state.error}</Notice>}
       <SubmitButton pendingText="Сохраняем…">
         {schedule ? "Сохранить" : "Добавить расписание"}

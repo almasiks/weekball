@@ -59,6 +59,8 @@ export default async function LivePage({ params }: PageProps<"/game/[id]/live">)
             startsAt: view.game.starts_at,
             timezone: view.game.timezone,
             place: view.game.place,
+            goalLimit: view.game.goal_limit,
+            matchMinutes: view.game.match_minutes,
           }}
         />
       )}

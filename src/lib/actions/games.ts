@@ -71,7 +71,21 @@ type ScheduleInput = {
   start_time: string;
   place: string;
   max_players: number;
+  goal_limit: number | null;
+  match_minutes: number;
 };
+
+// Match format fields (see FormatFields): "no limit" checkbox wins over the number.
+function readFormat(formData: FormData): { goal_limit: number | null; match_minutes: number } | string {
+  const noLimit = formData.get("noGoalLimit") === "on";
+  const goalLimit = readInt(formData, "goalLimit");
+  const minutes = readInt(formData, "matchMinutes");
+  if (!noLimit && (goalLimit === null || goalLimit < 1 || goalLimit > 20)) {
+    return "Лимит голов — от 1 до 20 (или «Без лимита голов»).";
+  }
+  if (minutes === null || minutes < 1 || minutes > 60) return "Длительность матча — от 1 до 60 минут.";
+  return { goal_limit: noLimit ? null : goalLimit, match_minutes: minutes };
+}
 
 function readScheduleForm(formData: FormData): ScheduleInput | string {
   const weekday = readInt(formData, "weekday");
@@ -85,7 +99,27 @@ function readScheduleForm(formData: FormData): ScheduleInput | string {
   if (maxPlayers === null || maxPlayers < 2 || maxPlayers > 100) {
     return "Лимит игроков — от 2 до 100.";
   }
-  return { weekday, start_time: startTime, place, max_players: maxPlayers };
+  const format = readFormat(formData);
+  if (typeof format === "string") return format;
+  return { weekday, start_time: startTime, place, max_players: maxPlayers, ...format };
+}
+
+// Per-game format (organizer, on the game page). Not-yet-started matches follow it.
+export async function saveGameFormatAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const gameId = readText(formData, "gameId");
+  const format = readFormat(formData);
+  if (typeof format === "string") return { error: format };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_game_format", {
+    p_game_id: gameId,
+    p_goal_limit: format.goal_limit,
+    p_match_minutes: format.match_minutes,
+  });
+  if (error) return { error: toMessage(error) };
+  revalidateGame(gameId);
+  revalidatePath(`/game/${gameId}/live`);
+  return { ok: true };
 }
 
 async function requireOrganizerGroup() {
@@ -183,6 +217,8 @@ export async function createGameAction(
   if (maxPlayers === null || maxPlayers < 2 || maxPlayers > 100) {
     return { error: "Лимит игроков — от 2 до 100." };
   }
+  const format = readFormat(formData);
+  if (typeof format === "string") return { error: format };
 
   const startsAt = zonedTimeToUtc(date, time, DEFAULT_TIMEZONE);
   if (startsAt.getTime() <= Date.now()) {
@@ -196,6 +232,7 @@ export async function createGameAction(
     place,
     max_players: maxPlayers,
     timezone: DEFAULT_TIMEZONE,
+    ...format,
   });
   if (error) return { error: toMessage(error) };
 

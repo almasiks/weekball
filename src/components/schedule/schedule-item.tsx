@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ScheduleForm } from "@/components/schedule/schedule-form";
 import { toggleScheduleAction } from "@/lib/actions/games";
 import { WEEKDAYS, formatTime } from "@/lib/datetime";
+import { formatLabel } from "@/lib/match/format";
 import type { ScheduleRow } from "@/lib/supabase/database.types";
 
 export function ScheduleItem({ schedule }: { schedule: ScheduleRow }) {
@@ -30,8 +31,8 @@ export function ScheduleItem({ schedule }: { schedule: ScheduleRow }) {
           <span className="font-medium">
             {WEEKDAYS[schedule.weekday]}, {formatTime(schedule.start_time)}
           </span>
-          <span className="truncate text-sm text-muted-foreground">
-            {[schedule.place, `до ${schedule.max_players} игроков`]
+          <span className="text-sm text-muted-foreground">
+            {[schedule.place, `до ${schedule.max_players} игроков`, formatLabel(schedule.goal_limit, schedule.match_minutes)]
               .filter(Boolean)
               .join(" · ")}
           </span>

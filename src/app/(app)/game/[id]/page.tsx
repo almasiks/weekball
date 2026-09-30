@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronLeft, MessageCircle, Swords, Timer, Users } from "lucide-react";
 import { MatchesOverview } from "@/components/match/matches-overview";
 import { RecalcButton } from "@/components/stats/recalc-button";
+import { GameFormatEditor } from "@/components/game/game-format-editor";
 import { createClient } from "@/lib/supabase/server";
 import { getMatchData } from "@/lib/match/load";
 import { gameSummaryText, whatsappUrl } from "@/lib/share";
@@ -103,6 +104,14 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
         userId={ctx.userId}
         gameUrl={`${siteUrl}/game/${view.game.id}`}
       />
+
+      {isOrganizer && teamsEditable && (
+        <GameFormatEditor
+          gameId={view.game.id}
+          goalLimit={view.game.goal_limit}
+          matchMinutes={view.game.match_minutes}
+        />
+      )}
 
       {isOrganizer && canRunMatch && (
         <Link

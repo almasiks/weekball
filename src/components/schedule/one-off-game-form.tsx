@@ -6,6 +6,7 @@ import type { FormState } from "@/lib/forms";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/notice";
+import { FormatFields } from "@/components/format-fields";
 import { SubmitButton } from "@/components/submit-button";
 
 export function OneOffGameForm({ today }: { today: string }) {
@@ -48,6 +49,7 @@ export function OneOffGameForm({ today }: { today: string }) {
           required
         />
       </div>
+      <FormatFields idPrefix="game" />
       {state.error && <Notice variant="error">{state.error}</Notice>}
       {state.ok && <Notice variant="success">Игра создана, запись открыта.</Notice>}
       <SubmitButton pendingText="Создаём…">Создать разовую игру</SubmitButton>

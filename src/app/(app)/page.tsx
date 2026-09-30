@@ -13,7 +13,6 @@ import { Notice } from "@/components/notice";
 import { SubmitButton } from "@/components/submit-button";
 import { GamePanel } from "@/components/game/game-panel";
 import { UpcomingGamesList } from "@/components/game/upcoming-games-list";
-import { PositionPicker } from "@/components/position-picker";
 import { signOutAction } from "@/lib/actions/auth";
 import { getGameView, getUpcomingGames } from "@/lib/games";
 import { getAppContext } from "@/lib/session";
@@ -153,14 +152,8 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       <Card size="sm">
         <CardHeader>
           <CardTitle>Ваш профиль</CardTitle>
-          <CardDescription>
-            {ctx.isAnonymous
-              ? "Профиль сохранён только на этом устройстве. Привяжите Google, чтобы не потерять его при смене телефона."
-              : "Google привязан — на новом устройстве просто войдите через Google."}
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          <PositionPicker position={ctx.player?.position ?? null} />
           {ctx.isAnonymous ? (
             <>
               <GoogleLinkButton />

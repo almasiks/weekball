@@ -62,7 +62,7 @@ export type TimerCommand =
   | { kind: "resume" }
   | { kind: "break"; period: number }
   | { kind: "next_period"; period: number }
-  | { kind: "finish" };
+  | { kind: "finish"; reason?: "manual" | "time" };
 
 /** Same transitions as the SQL functions; repeated commands are no-ops. */
 export function applyTimerCommand<T extends TimerFields>(state: T, cmd: TimerCommand, atMs: number): T {
@@ -91,6 +91,14 @@ export function applyTimerCommand<T extends TimerFields>(state: T, cmd: TimerCom
       return { ...state, status: "live", timer_status: "running", period: cmd.period, timer_elapsed_ms: 0, timer_started_at: at };
     case "finish":
       if (state.status === "finished" || state.status === "scheduled") return state;
-      return { ...state, status: "finished", timer_status: "finished", timer_elapsed_ms: accumulated(), timer_started_at: null };
+      return {
+        ...state,
+        status: "finished",
+        timer_status: "finished",
+        timer_elapsed_ms: accumulated(),
+        timer_started_at: null,
+        finish_reason: cmd.reason ?? "manual",
+        finish_event_id: null,
+      };
   }
 }

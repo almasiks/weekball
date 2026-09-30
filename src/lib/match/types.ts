@@ -19,6 +19,10 @@ export type LiveMatch = {
   score_a: number;
   score_b: number;
   sort_order: number;
+  // Match format / how it ended (optional: the public live page doesn't send them).
+  goal_limit?: number | null;
+  finish_reason?: "manual" | "goal_limit" | "time" | null;
+  finish_event_id?: string | null;
 };
 
 export type LiveEvent = {

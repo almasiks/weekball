@@ -7,7 +7,6 @@ import { errorMessage, toMessage } from "@/lib/errors";
 import { balanceTeams } from "@/lib/teams/balance";
 import { nextFreeColor, teamColor } from "@/lib/teams/colors";
 import { playerStrength } from "@/lib/teams/strength";
-import type { PlayerPosition } from "@/lib/supabase/database.types";
 
 export type ActionResult = { error?: string };
 
@@ -205,18 +204,5 @@ export async function setPlayerLevelAction(playerId: string, level: number): Pro
   });
   if (error) return { error: toMessage(error) };
   revalidatePath("/members");
-  return {};
-}
-
-export async function setMyPositionAction(position: PlayerPosition | null): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  const userId = claims?.claims?.sub;
-  if (!userId) return { error: errorMessage("not_authenticated") };
-
-  // Column grants allow players to change only name / avatar / position.
-  const { error } = await supabase.from("players").update({ position }).eq("id", userId);
-  if (error) return { error: toMessage(error) };
-  revalidatePath("/", "layout");
   return {};
 }

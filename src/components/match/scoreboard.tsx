@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 export function statusLabel(match: Pick<LiveMatch, "status" | "period" | "periods" | "timer_status">): string {
   if (match.status === "scheduled") return "Не начался";
-  if (match.status === "finished") return "Завершён";
+  if (match.status === "finished") return "Матч завершён";
   if (match.status === "break") return "Перерыв";
   const period = match.periods > 1 ? `${match.period}-й тайм` : "Идёт";
   return match.timer_status === "paused" ? `${period} · пауза` : period;
@@ -67,6 +67,7 @@ export function Scoreboard({
   scoreB,
   offset,
   big,
+  note,
 }: {
   match: LiveMatch;
   teams: LiveTeam[];
@@ -74,6 +75,8 @@ export function Scoreboard({
   scoreB: number;
   offset: number;
   big?: boolean;
+  // Shown under the status, e.g. the match format "до 2 голов · 7 мин".
+  note?: string;
 }) {
   const teamA = teams.find((t) => t.id === match.team_a_id);
   const teamB = teams.find((t) => t.id === match.team_b_id);
@@ -93,6 +96,7 @@ export function Scoreboard({
       <span className={cn("text-muted-foreground", big ? "text-base font-medium" : "text-xs")}>
         {statusLabel(match)}
       </span>
+      {note && <span className="text-sm text-muted-foreground">{note}</span>}
     </div>
   );
 }

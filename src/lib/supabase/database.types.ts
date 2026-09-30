@@ -32,6 +32,8 @@ export type ScheduleRow = {
   timezone: string;
   is_active: boolean;
   created_at: string;
+  goal_limit: number | null;
+  match_minutes: number;
 };
 
 export type GameRow = {
@@ -50,6 +52,8 @@ export type GameRow = {
   teams_updated_at: string | null;
   live_token: string | null;
   stats_processed_at: string | null;
+  goal_limit: number | null;
+  match_minutes: number;
 };
 
 export type MatchRow = LiveMatch & {
@@ -198,6 +202,8 @@ export type Database = {
           max_players?: number;
           timezone?: string;
           is_active?: boolean;
+          goal_limit?: number | null;
+          match_minutes?: number;
         };
         Update: {
           weekday?: number;
@@ -206,6 +212,8 @@ export type Database = {
           max_players?: number;
           timezone?: string;
           is_active?: boolean;
+          goal_limit?: number | null;
+          match_minutes?: number;
         };
         Relationships: [
           {
@@ -225,6 +233,8 @@ export type Database = {
           place?: string;
           max_players?: number;
           timezone?: string;
+          goal_limit?: number | null;
+          match_minutes?: number;
         };
         Update: never;
         Relationships: [
@@ -405,7 +415,14 @@ export type Database = {
         Args: { p_match_id: string; p_period: number; p_client_ts?: string | null };
         Returns: MatchRow;
       };
-      finish_match: { Args: { p_match_id: string; p_client_ts?: string | null }; Returns: MatchRow };
+      finish_match: {
+        Args: { p_match_id: string; p_client_ts?: string | null; p_reason?: "manual" | "time" };
+        Returns: MatchRow;
+      };
+      update_game_format: {
+        Args: { p_game_id: string; p_goal_limit: number | null; p_match_minutes: number };
+        Returns: GameRow;
+      };
       reopen_match: { Args: { p_match_id: string }; Returns: MatchRow };
       add_event: { Args: { payload: Omit<LiveEvent, "voided_at"> }; Returns: EventRow };
       void_event: { Args: { p_event_id: string }; Returns: EventRow };

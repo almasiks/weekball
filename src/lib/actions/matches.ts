@@ -21,55 +21,40 @@ async function done(gameId: string, call: PromiseLike<{ error: { message?: strin
   return {};
 }
 
-export async function generateRoundRobinAction(
-  gameId: string,
-  periods: number,
-  periodSeconds: number,
-): Promise<ActionResult> {
+// Matches take the game format (goal limit + minutes) in the database.
+export async function generateRoundRobinAction(gameId: string): Promise<ActionResult> {
   const supabase = await createClient();
-  return done(
-    gameId,
-    supabase.rpc("generate_round_robin", {
-      p_game_id: gameId,
-      p_periods: periods,
-      p_period_seconds: periodSeconds,
-    }),
-  );
+  return done(gameId, supabase.rpc("generate_round_robin", { p_game_id: gameId }));
 }
 
 export async function createMatchAction(
   gameId: string,
   teamA: string,
   teamB: string,
-  periods: number,
-  periodSeconds: number,
-): Promise<ActionResult> {
+): Promise<ActionResult & { id?: string }> {
   const supabase = await createClient();
-  return done(
-    gameId,
-    supabase.rpc("create_match", {
-      p_game_id: gameId,
-      p_team_a_id: teamA,
-      p_team_b_id: teamB,
-      p_periods: periods,
-      p_period_seconds: periodSeconds,
-    }),
-  );
+  const { data, error } = await supabase.rpc("create_match", {
+    p_game_id: gameId,
+    p_team_a_id: teamA,
+    p_team_b_id: teamB,
+  });
+  if (error) return { error: toMessage(error) };
+  revalidateGame(gameId);
+  return { id: data.id };
 }
 
-export async function updateMatchSettingsAction(
+export async function updateGameFormatAction(
   gameId: string,
-  matchId: string,
-  periods: number,
-  periodSeconds: number,
+  goalLimit: number | null,
+  matchMinutes: number,
 ): Promise<ActionResult> {
   const supabase = await createClient();
   return done(
     gameId,
-    supabase.rpc("update_match_settings", {
-      p_match_id: matchId,
-      p_periods: periods,
-      p_period_seconds: periodSeconds,
+    supabase.rpc("update_game_format", {
+      p_game_id: gameId,
+      p_goal_limit: goalLimit,
+      p_match_minutes: matchMinutes,
     }),
   );
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, MapPin, MessageCircle } from "lucide-react";
+import { ChevronRight, MapPin, MessageCircle, Shirt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -40,7 +40,10 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
       ? waitlist.findIndex((s) => s.playerId === me.playerId) + 1
       : null;
   const isActive = game.status !== "cancelled" && game.status !== "finished";
-  const fill = Math.min(100, Math.round((going.length / game.max_players) * 100));
+  const myTeam = game.teams_published_at
+    ? view.teams.find((t) => t.players.some((p) => p.playerId === userId))
+    : undefined;
+  const fill =Math.min(100, Math.round((going.length / game.max_players) * 100));
 
   const shareText = gameShareText({
     startsAt: game.starts_at,
@@ -122,6 +125,29 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
         )}
         {game.status === "cancelled" && (
           <Notice variant="error">Игра отменена. Следите за новостями в чате.</Notice>
+        )}
+
+        {myTeam && isActive && (
+          <div
+            className={cn(
+              "flex min-h-12 items-center gap-2 rounded-lg px-3 py-2 font-medium",
+              myTeam.color.ink === "light" ? "text-white" : "text-neutral-900",
+              myTeam.color.hex === "#ffffff" && "border",
+            )}
+            style={{ backgroundColor: myTeam.color.hex }}
+          >
+            <Shirt className="size-5 shrink-0" aria-hidden />
+            Ты в команде «{myTeam.team.name}»
+          </div>
+        )}
+
+        {game.draft_active && isActive && (
+          <Link
+            href={`/game/${game.id}/teams`}
+            className={cn(buttonVariants({ variant: "secondary" }), "w-full")}
+          >
+            Идёт драфт — смотреть
+          </Link>
         )}
 
         {queuePosition && isActive && (

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Swords, Users } from "lucide-react";
+import { ShareTeamsButton } from "@/components/teams/share-teams-button";
+import { TeamsList } from "@/components/teams/teams-list";
+import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notice } from "@/components/notice";
@@ -72,6 +75,7 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
 
   const isOrganizer =
     ctx.role === "organizer" && ctx.group?.id === view.game.group_id;
+  const teamsEditable = ["signup", "closed", "teams"].includes(view.game.status);
   const siteUrl = await getSiteUrl();
 
   return (
@@ -88,6 +92,40 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
         userId={ctx.userId}
         gameUrl={`${siteUrl}/game/${view.game.id}`}
       />
+      {view.game.draft_active && (
+        <Link href={`/game/${id}/teams`} className={cn(buttonVariants({ size: "lg" }), "w-full")}>
+          <Swords aria-hidden />
+          Идёт драфт — смотреть
+        </Link>
+      )}
+
+      {isOrganizer && !view.game.draft_active && teamsEditable && (
+        <Link
+          href={`/game/${id}/teams`}
+          className={cn(buttonVariants({ size: "lg", variant: "secondary" }), "w-full")}
+        >
+          <Users aria-hidden />
+          {view.teams.length ? "Команды" : "Разделить на команды"}
+        </Link>
+      )}
+
+      {view.game.teams_published_at && view.teams.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold">Составы</h2>
+          <TeamsList teams={view.teams} userId={ctx.userId} />
+          <ShareTeamsButton
+            startsAt={view.game.starts_at}
+            timezone={view.game.timezone}
+            url={`${siteUrl}/game/${id}`}
+            teams={view.teams.map((t) => ({
+              emoji: t.color.emoji,
+              name: t.team.name,
+              players: t.players.map((p) => p.name),
+            }))}
+          />
+        </section>
+      )}
+
       {isOrganizer && (
         <>
           <OrganizerControls gameId={view.game.id} status={view.game.status} />

@@ -13,6 +13,7 @@ import { Notice } from "@/components/notice";
 import { SubmitButton } from "@/components/submit-button";
 import { GamePanel } from "@/components/game/game-panel";
 import { UpcomingGamesList } from "@/components/game/upcoming-games-list";
+import { PositionPicker } from "@/components/position-picker";
 import { signOutAction } from "@/lib/actions/auth";
 import { getGameView, getUpcomingGames } from "@/lib/games";
 import { getAppContext } from "@/lib/session";
@@ -159,6 +160,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
+          <PositionPicker position={ctx.player?.position ?? null} />
           {ctx.isAnonymous ? (
             <>
               <GoogleLinkButton />

@@ -55,6 +55,8 @@ select public.apply_assignments(
    from generate_series(1, 9) n)
 );
 
+-- This file tests scoring, not the goal limit: play without a limit.
+select public.update_game_format((select id from ids where k = 'game'), null, 5);
 select is(
   (select count(*)::int from public.generate_round_robin((select id from ids where k = 'game'), 1, 300)),
   3,

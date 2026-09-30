@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, Swords, Users } from "lucide-react";
+import { ChevronLeft, MessageCircle, Swords, Timer, Users } from "lucide-react";
+import { MatchesOverview } from "@/components/match/matches-overview";
+import { getMatchData } from "@/lib/match/load";
+import { gameSummaryText, whatsappUrl } from "@/lib/share";
 import { ShareTeamsButton } from "@/components/teams/share-teams-button";
 import { TeamsList } from "@/components/teams/teams-list";
 import { cn } from "@/lib/utils";
@@ -75,7 +78,9 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
 
   const isOrganizer =
     ctx.role === "organizer" && ctx.group?.id === view.game.group_id;
-  const teamsEditable = ["signup", "closed", "teams"].includes(view.game.status);
+  const teamsEditable = ["signup", "closed", "teams", "live"].includes(view.game.status);
+  const canRunMatch = teamsEditable && view.teams.length >= 2;
+  const matchData = await getMatchData(view);
   const siteUrl = await getSiteUrl();
 
   return (
@@ -92,6 +97,54 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
         userId={ctx.userId}
         gameUrl={`${siteUrl}/game/${view.game.id}`}
       />
+
+      {isOrganizer && canRunMatch && (
+        <Link
+          href={`/game/${id}/live`}
+          className={cn(buttonVariants({ size: "lg" }), "h-14 w-full text-base")}
+        >
+          <Timer aria-hidden />
+          {view.game.status === "live" ? "Вести матч" : "Начать матч"}
+        </Link>
+      )}
+
+      {matchData.matches.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold">
+            {view.game.status === "finished" ? "Итоги" : "Матчи"}
+          </h2>
+          <MatchesOverview
+            matches={matchData.matches}
+            events={matchData.events}
+            teams={matchData.teams}
+            names={matchData.names}
+            standings={matchData.standings}
+            matchHref={(matchId) => `/match/${matchId}`}
+            finished={view.game.status === "finished"}
+          />
+          {matchData.matches.some((m) => m.status === "finished") && (
+            <a
+              href={whatsappUrl(
+                gameSummaryText({
+                  startsAt: view.game.starts_at,
+                  timezone: view.game.timezone,
+                  teams: matchData.teams,
+                  matches: matchData.matches,
+                  standings: matchData.standings,
+                  url: `${siteUrl}/game/${id}`,
+                }),
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants(), "w-full bg-[#128C7E] text-white hover:bg-[#0e7266]")}
+            >
+              <MessageCircle aria-hidden />
+              Поделиться итогами
+            </a>
+          )}
+        </section>
+      )}
+
       {view.game.draft_active && (
         <Link href={`/game/${id}/teams`} className={cn(buttonVariants({ size: "lg" }), "w-full")}>
           <Swords aria-hidden />

@@ -5,13 +5,15 @@ import { Check, Copy, MessageCircle } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Props = { inviteUrl: string; groupName: string };
+type Props = { inviteUrl: string; groupName: string; message?: string };
 
-export function InviteShare({ inviteUrl, groupName }: Props) {
+export function InviteShare({ inviteUrl, groupName, message: customMessage }: Props) {
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
 
-  const message = `Присоединяйся к группе «${groupName}» в Weekly Football — отмечайся на игры здесь: ${inviteUrl}`;
+  const message =
+    customMessage ??
+    `Присоединяйся к группе «${groupName}» в Weekly Football — отмечайся на игры здесь: ${inviteUrl}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
   async function copy() {

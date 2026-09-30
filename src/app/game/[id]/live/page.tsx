@@ -4,29 +4,27 @@ import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Notice } from "@/components/notice";
 import { GameRealtime } from "@/components/game/game-realtime";
-import { DraftPanel } from "@/components/teams/draft-panel";
-import { TeamsBoard } from "@/components/teams/teams-board";
+import { LiveConsole } from "@/components/live/live-console";
 import { formatGameDate } from "@/lib/datetime";
 import { getGameView } from "@/lib/games";
+import { getMatchData } from "@/lib/match/load";
 import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
 
-export const metadata: Metadata = { title: "Команды" };
+export const metadata: Metadata = { title: "Матч" };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default async function TeamsPage({ params }: PageProps<"/game/[id]/teams">) {
+export default async function LivePage({ params }: PageProps<"/game/[id]/live">) {
   const { id } = await params;
   const ctx = await getAppContext();
   const view = UUID.test(id) && ctx.userId ? await getGameView(id) : null;
   if (!view) redirect(`/game/${id}`);
-
   const isOrganizer = ctx.role === "organizer" && ctx.group?.id === view.game.group_id;
-  // Regular players only come here to watch / pick during a draft.
-  if (!isOrganizer && !view.game.draft_active) redirect(`/game/${id}`);
+  if (!isOrganizer) redirect(`/game/${id}`);
 
-  const editable = ["signup", "closed", "teams", "live"].includes(view.game.status);
-  const shareUrl = `${await getSiteUrl()}/game/${id}`;
+  const [data, siteUrl] = await Promise.all([getMatchData(view), getSiteUrl()]);
+  const cancelled = view.game.status === "cancelled";
 
   return (
     <div className="flex flex-col gap-4">
@@ -39,23 +37,26 @@ export default async function TeamsPage({ params }: PageProps<"/game/[id]/teams"
         К игре
       </Link>
       <header>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {view.game.draft_active ? "Драфт" : "Команды"}
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight">Матч</h1>
         <p className="text-sm text-muted-foreground">
           {formatGameDate(view.game.starts_at, view.game.timezone)}
           {view.game.place && ` · ${view.game.place}`}
         </p>
       </header>
 
-      {!editable ? (
-        <Notice variant="error">Игра отменена или завершена — составы менять нельзя.</Notice>
-      ) : view.game.draft_active ? (
-        <DraftPanel view={view} userId={ctx.userId} isOrganizer={isOrganizer} />
-      ) : view.going.length === 0 ? (
-        <Notice>На игру пока никто не записан — делить некого.</Notice>
+      {cancelled ? (
+        <Notice variant="error">Игра отменена.</Notice>
       ) : (
-        <TeamsBoard view={view} shareUrl={shareUrl} />
+        <LiveConsole
+          gameId={view.game.id}
+          gameStatus={view.game.status}
+          teams={data.teams}
+          matches={data.matches}
+          events={data.events}
+          names={data.names}
+          liveToken={view.game.live_token}
+          siteUrl={siteUrl}
+        />
       )}
     </div>
   );

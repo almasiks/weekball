@@ -14,7 +14,7 @@ export function GameRealtime({ gameId }: { gameId: string }) {
     let cancelled = false;
     const refresh = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => router.refresh(), 150);
+      timer = setTimeout(() => router.refresh(), 50);
     };
 
     const channel = supabase
@@ -27,6 +27,16 @@ export function GameRealtime({ gameId }: { gameId: string }) {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "games", filter: `id=eq.${gameId}` },
+        refresh,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "matches", filter: `game_id=eq.${gameId}` },
+        refresh,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "events", filter: `game_id=eq.${gameId}` },
         refresh,
       )
       // SUBSCRIBED fires before Postgres changes are actually streamed; this system

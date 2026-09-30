@@ -24,6 +24,25 @@ export function gameShareText(g: ShareInput): string {
   return `${when}${where}. ${call} Ссылка: ${g.url}`;
 }
 
+type TeamsShareInput = {
+  startsAt: string;
+  timezone: string;
+  url: string;
+  teams: { emoji: string; name: string; players: string[] }[];
+};
+
+// "Составы на Сб, 4 окт, 19:00:\n🔴 Красные: Иван, Пётр\n🔵 Синие: …\nСсылка: …"
+export function teamsShareText(input: TeamsShareInput): string {
+  const lines = input.teams.map(
+    (t) => `${t.emoji} ${t.name}: ${t.players.length ? t.players.join(", ") : "—"}`,
+  );
+  return [
+    `Составы на ${formatGameDate(input.startsAt, input.timezone)}:`,
+    ...lines,
+    `Ссылка: ${input.url}`,
+  ].join("\n");
+}
+
 export function whatsappUrl(text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }

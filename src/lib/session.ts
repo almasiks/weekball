@@ -1,12 +1,12 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { MemberRole } from "@/lib/supabase/database.types";
+import type { MemberRole, PlayerPosition } from "@/lib/supabase/database.types";
 
 export type AppContext = {
   userId: string | null;
   isAnonymous: boolean;
-  player: { id: string; name: string } | null;
+  player: { id: string; name: string; position: PlayerPosition | null } | null;
   group: { id: string; name: string; inviteCode: string } | null;
   role: MemberRole | null;
 };
@@ -31,7 +31,7 @@ export const getAppContext = cache(async (): Promise<AppContext> => {
   const isAnonymous = claims.is_anonymous === true;
 
   const [{ data: player }, { data: membership }] = await Promise.all([
-    supabase.from("players").select("id, name").eq("id", userId).maybeSingle(),
+    supabase.from("players").select("id, name, position").eq("id", userId).maybeSingle(),
     supabase
       .from("group_members")
       .select("role, groups(id, name, invite_code)")
@@ -58,7 +58,7 @@ export async function getGroupMembers(groupId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("group_members")
-    .select("player_id, role, players(name)")
+    .select("player_id, role, players(name, level, position)")
     .eq("group_id", groupId);
   if (error) throw error;
 
@@ -67,6 +67,8 @@ export async function getGroupMembers(groupId: string) {
       playerId: row.player_id,
       role: row.role,
       name: row.players?.name ?? "Без имени",
+      level: row.players?.level ?? 3,
+      position: row.players?.position ?? null,
     }))
     .sort(
       (a, b) =>

@@ -28,7 +28,12 @@ export function GameRealtime({ gameId }: { gameId: string }) {
         "postgres_changes",
         { event: "*", schema: "public", table: "games", filter: `id=eq.${gameId}` },
         refresh,
-      );
+      )
+      // SUBSCRIBED fires before Postgres changes are actually streamed; this system
+      // message marks the real start. Refresh once to catch changes made in between.
+      .on("system", {}, (payload: { extension?: string; status?: string }) => {
+        if (payload.extension === "postgres_changes" && payload.status === "ok") refresh();
+      });
 
     // Realtime evaluates RLS with the user's JWT, so pass it before subscribing.
     supabase.auth.getSession().then(({ data }) => {

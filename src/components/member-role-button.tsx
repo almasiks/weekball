@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { setMemberRoleAction, type FormState } from "@/lib/actions/groups";
+import { setMemberRoleAction } from "@/lib/actions/groups";
+import type { FormState } from "@/lib/forms";
 import type { MemberRole } from "@/lib/supabase/database.types";
 import { SubmitButton } from "@/components/submit-button";
 

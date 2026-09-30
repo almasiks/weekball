@@ -5,30 +5,14 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAppContext } from "@/lib/session";
 import type { MemberRole } from "@/lib/supabase/database.types";
+import { errorMessage, toMessage } from "@/lib/errors";
+import { readText, type FormState } from "@/lib/forms";
 
-export type FormState = { error?: string };
-
-const ERROR_MESSAGES: Record<string, string> = {
-  invalid_group_name: "Название группы должно быть от 1 до 60 символов.",
-  invalid_player_name: "Имя должно быть от 1 до 40 символов.",
-  invalid_invite_code:
-    "Ссылка-приглашение недействительна. Попросите организатора прислать новую.",
-  not_authenticated: "Не удалось войти. Обновите страницу и попробуйте ещё раз.",
-  last_organizer: "В группе должен остаться хотя бы один организатор.",
+const ERROR_MESSAGES = {
+  invalid_group_name: errorMessage("invalid_group_name"),
+  invalid_player_name: errorMessage("invalid_player_name"),
+  not_authenticated: errorMessage("not_authenticated"),
 };
-
-function toMessage(error: { message?: string } | null | undefined): string {
-  const key = Object.keys(ERROR_MESSAGES).find((k) =>
-    error?.message?.includes(k),
-  );
-  return key
-    ? ERROR_MESSAGES[key]
-    : "Что-то пошло не так. Попробуйте ещё раз.";
-}
-
-function readText(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
-}
 
 // Uses the existing session or silently creates an anonymous one.
 async function ensureSession() {

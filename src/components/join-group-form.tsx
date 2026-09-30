@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { joinGroupAction, type FormState } from "@/lib/actions/groups";
+import { joinGroupAction } from "@/lib/actions/groups";
+import type { FormState } from "@/lib/forms";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/notice";

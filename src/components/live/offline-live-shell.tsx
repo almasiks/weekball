@@ -89,6 +89,7 @@ export function OfflineLiveShell() {
         names={snapshot.names}
         siteUrl={snapshot.siteUrl}
         meta={snapshot.meta}
+        sounds={snapshot.sounds ?? []}
         initialOffset={snapshot.offset}
         offline
       />

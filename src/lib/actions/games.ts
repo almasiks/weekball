@@ -115,6 +115,7 @@ export async function saveGameFormatAction(_prev: FormState, formData: FormData)
     p_game_id: gameId,
     p_goal_limit: format.goal_limit,
     p_match_minutes: format.match_minutes,
+    p_auto_sounds: formData.get("autoSounds") === "on",
   });
   if (error) return { error: toMessage(error) };
   revalidateGame(gameId);

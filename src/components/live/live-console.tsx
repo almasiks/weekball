@@ -37,6 +37,9 @@ import {
   timeUpAt,
 } from "@/lib/match/format";
 import { NextMatchPicker } from "@/components/live/next-match-picker";
+import { builtinSound, SoundPanel, type PanelSound } from "@/components/live/sound-panel";
+import { endedByItself, minuteWarningDue } from "@/lib/sounds/auto";
+import { getSoundEngine } from "@/lib/sounds/engine";
 import type { EventPayload, QueueItem } from "@/lib/match/queue";
 import type { EventType, LiveEvent, LiveMatch, LiveTeam } from "@/lib/match/types";
 import { finishGameAction, reopenMatchAction } from "@/lib/actions/matches";
@@ -58,6 +61,7 @@ type Props = {
   names: Record<string, string>;
   siteUrl: string;
   meta: LiveSnapshot["meta"];
+  sounds: PanelSound[];
   // Offline shell: opened from the IndexedDB snapshot, no server actions / links.
   offline?: boolean;
   initialOffset?: number;
@@ -110,10 +114,11 @@ export function LiveConsole(props: Props) {
       matches: props.matches,
       events: props.events,
       names: props.names,
+      sounds: props.sounds,
       siteUrl: props.siteUrl,
       offset: measuredOffset ?? 0,
     });
-  }, [gameId, props.offline, props.meta, props.gameStatus, props.teams, props.matches, props.events, props.names, props.siteUrl, measuredOffset]);
+  }, [gameId, props.offline, props.meta, props.gameStatus, props.teams, props.matches, props.events, props.names, props.sounds, props.siteUrl, measuredOffset]);
 
   // --- Optimistic state: server data + queued (unsent / just sent) actions, in order.
   const { matches, events } = useMemo(() => {
@@ -195,6 +200,28 @@ export function LiveConsole(props: Props) {
       status: "pending",
     });
   }, [liveMatch, now, offset, gameFinished, enqueue]);
+
+  // --- Auto sounds (switch in the game format): "Минута!" once per match in its
+  // last minute; the final whistle when a match ends by itself (time or goal limit).
+  const autoSounds = props.meta.autoSounds ?? true;
+  const { sounds } = props;
+  const minuteAnnounced = useRef(new Set<string>());
+  useEffect(() => {
+    if (!autoSounds || !liveMatch || minuteAnnounced.current.has(liveMatch.id)) return;
+    if (!minuteWarningDue(liveMatch, now + offset)) return;
+    minuteAnnounced.current.add(liveMatch.id);
+    void getSoundEngine().play(builtinSound("minute", sounds));
+  }, [autoSounds, liveMatch, now, offset, sounds]);
+
+  const lastStatus = useRef(new Map<string, LiveMatch["status"]>());
+  useEffect(() => {
+    for (const m of matches) {
+      if (autoSounds && endedByItself(lastStatus.current.get(m.id), m)) {
+        void getSoundEngine().play(builtinSound("final", sounds));
+      }
+      lastStatus.current.set(m.id, m.status);
+    }
+  }, [autoSounds, matches, sounds]);
 
   // The assist sheet closes by itself when its window ends (the goal is sent without an assist).
   const assistOpen = picker?.step === "assist" && now <= picker.until;
@@ -377,6 +404,8 @@ export function LiveConsole(props: Props) {
               note={matchFormatLabel(current)}
             />
 
+            <SoundPanel sounds={props.sounds} />
+
             {/* Timer controls */}
             {!gameFinished && (
               <div className="grid grid-cols-2 gap-2">
@@ -407,7 +436,7 @@ export function LiveConsole(props: Props) {
                   <Button
                     size="lg"
                     variant="outline"
-                    className={cn("h-16 text-base", current.status === "break" && "col-span-2")}
+                    className={cn("h-16 gap-1.5 px-2 text-base", current.status === "break" && "col-span-2")}
                     onClick={() => setConfirmFinish("match")}
                   >
                     <Flag aria-hidden />

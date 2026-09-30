@@ -54,6 +54,17 @@ export type GameRow = {
   stats_processed_at: string | null;
   goal_limit: number | null;
   match_minutes: number;
+  auto_sounds: boolean;
+};
+
+export type SoundRow = {
+  id: string;
+  group_id: string;
+  name: string;
+  file_path: string;
+  builtin_key: "minute" | "out" | "whistle" | "final" | null;
+  sort_order: number;
+  created_at: string;
 };
 
 export type MatchRow = LiveMatch & {
@@ -297,6 +308,18 @@ export type Database = {
           },
         ];
       };
+      sounds: {
+        Row: SoundRow;
+        Insert: {
+          group_id: string;
+          name: string;
+          file_path: string;
+          builtin_key?: SoundRow["builtin_key"];
+          sort_order?: number;
+        };
+        Update: { name?: string; sort_order?: number };
+        Relationships: [];
+      };
       matches: {
         Row: MatchRow;
         Insert: never;
@@ -420,7 +443,12 @@ export type Database = {
         Returns: MatchRow;
       };
       update_game_format: {
-        Args: { p_game_id: string; p_goal_limit: number | null; p_match_minutes: number };
+        Args: {
+          p_game_id: string;
+          p_goal_limit: number | null;
+          p_match_minutes: number;
+          p_auto_sounds?: boolean | null;
+        };
         Returns: GameRow;
       };
       reopen_match: { Args: { p_match_id: string }; Returns: MatchRow };

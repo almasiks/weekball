@@ -2,6 +2,7 @@
 
 import { get, set } from "idb-keyval";
 import type { LiveEvent, LiveMatch, LiveTeam } from "./types";
+import type { PanelSound } from "@/components/live/sound-panel";
 
 // Last known server state of the organizer console, kept on this device only
 // (IndexedDB, not the service-worker cache) so the console can open offline.
@@ -15,7 +16,10 @@ export type LiveSnapshot = {
     // Game format (older snapshots may not have it).
     goalLimit?: number | null;
     matchMinutes?: number;
+    autoSounds?: boolean;
   };
+  // Sound buttons of the group (files themselves are cached separately).
+  sounds?: PanelSound[];
   gameStatus: string;
   teams: LiveTeam[];
   matches: LiveMatch[];

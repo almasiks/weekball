@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronRight, Volume2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -45,6 +45,15 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
       >
         <CalendarDays className="size-5 text-primary" aria-hidden />
         <span className="flex-1 font-medium">Расписание и игры</span>
+        <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
+      </Link>
+
+      <Link
+        href="/admin/sounds"
+        className="flex min-h-14 items-center gap-3 rounded-xl bg-card px-4 ring-1 ring-foreground/10"
+      >
+        <Volume2 className="size-5 text-primary" aria-hidden />
+        <span className="flex-1 font-medium">Звуки</span>
         <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
       </Link>
 

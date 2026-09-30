@@ -10,6 +10,7 @@ import { getGameView } from "@/lib/games";
 import { getMatchData } from "@/lib/match/load";
 import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Матч" };
 
@@ -23,7 +24,16 @@ export default async function LivePage({ params }: PageProps<"/game/[id]/live">)
   const isOrganizer = ctx.role === "organizer" && ctx.group?.id === view.game.group_id;
   if (!isOrganizer) redirect(`/game/${id}`);
 
-  const [data, siteUrl] = await Promise.all([getMatchData(view), getSiteUrl()]);
+  const supabase = await createClient();
+  const [data, siteUrl, { data: sounds }] = await Promise.all([
+    getMatchData(view),
+    getSiteUrl(),
+    supabase
+      .from("sounds")
+      .select("id, name, file_path, builtin_key, sort_order")
+      .eq("group_id", view.game.group_id)
+      .order("sort_order"),
+  ]);
   const cancelled = view.game.status === "cancelled";
 
   return (
@@ -61,7 +71,9 @@ export default async function LivePage({ params }: PageProps<"/game/[id]/live">)
             place: view.game.place,
             goalLimit: view.game.goal_limit,
             matchMinutes: view.game.match_minutes,
+            autoSounds: view.game.auto_sounds,
           }}
+          sounds={sounds ?? []}
         />
       )}
     </div>

@@ -110,6 +110,7 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
           gameId={view.game.id}
           goalLimit={view.game.goal_limit}
           matchMinutes={view.game.match_minutes}
+          autoSounds={view.game.auto_sounds}
         />
       )}
 

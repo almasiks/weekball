@@ -1,4 +1,4 @@
-// Local-only helper: creates N fake players in a group and signs them up for the next game.
+// Local-only helper: creates N fake roster players (no accounts) in a group and signs them up for the next game.
 //
 //   npm run seed:players -- 18            # 18 players, first group, next game
 //   npm run seed:players -- 18 ABCD2345   # a specific group by invite code
@@ -8,7 +8,8 @@
 // Supabase unless SEED_ALLOW_REMOTE=1 is set explicitly (never do this on production).
 import { createClient } from "@supabase/supabase-js";
 
-const EMAIL_DOMAIN = "seed.weekball.test";
+const EMAIL_DOMAIN = "seed.weekball.test"; // accounts made by older versions of this script
+const SUFFIX = " (тест)";
 
 const NAMES = [
   "Азамат", "Бекзат", "Данияр", "Ерлан", "Жандос", "Ильяс", "Канат", "Марат",
@@ -76,20 +77,19 @@ async function seed(count: number, inviteCode?: string) {
   let freeSpots = game.max_players - (goingNow ?? 0);
 
   console.log(`Группа «${group.name}», игра ${game.starts_at}, свободно мест: ${freeSpots}`);
-  const stamp = Date.now();
 
   for (let i = 0; i < count; i++) {
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: `seed-${stamp}-${i}@${EMAIL_DOMAIN}`,
-      email_confirm: true,
-      user_metadata: { weekball_seed: true },
-    });
-    if (error || !created.user) fail(`createUser: ${error?.message}`);
-    const id = created.user.id;
-    const name = `${NAMES[i]} (тест)`;
+    // Roster mode: players without an account (user_id = null), like names pasted into /roster.
+    const name = `${NAMES[i]}${SUFFIX}`;
+    const { data: created, error } = await admin
+      .from("players")
+      .insert({ name, level: LEVELS[i], position: POSITIONS[i], is_regular: true })
+      .select("id")
+      .single();
+    if (error || !created) fail(`${name}: ${error?.message}`);
+    const id = created.id;
 
     const steps = [
-      admin.from("players").insert({ id, name, level: LEVELS[i], position: POSITIONS[i] }),
       admin.from("group_members").insert({ group_id: group.id, player_id: id, role: "player" }),
       admin.from("signups").insert({
         game_id: game.id,
@@ -108,13 +108,23 @@ async function seed(count: number, inviteCode?: string) {
 }
 
 async function clean() {
-  let removed = 0;
+  // Cascades: players -> group_members, signups, team_players.
+  const { data: players, error: playersError } = await admin
+    .from("players")
+    .delete()
+    .like("name", `%${SUFFIX}`)
+    .is("user_id", null)
+    .select("id");
+  if (playersError) fail(playersError.message);
+  let removed = players?.length ?? 0;
+
   for (let page = 1; ; page++) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
     if (error) fail(error.message);
     const seeded = data.users.filter((u) => u.email?.endsWith(`@${EMAIL_DOMAIN}`));
     for (const user of seeded) {
-      // Cascades: players -> group_members, signups, team_players.
+      // Legacy seeded accounts: their players were named with the suffix too.
+      await admin.from("players").delete().eq("user_id", user.id);
       const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
       if (deleteError) fail(deleteError.message);
       removed++;

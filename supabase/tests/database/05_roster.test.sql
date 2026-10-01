@@ -2,7 +2,7 @@
 -- quick add, reset / delete game, per-game stats, MVP.
 -- Here players.id is NOT the user id (the real flow).
 begin;
-select plan(44);
+select plan(49);
 
 create function pg_temp.login(uid uuid) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
@@ -267,6 +267,36 @@ select results_eq(
   $$ select status::text, mvp_player_id, stats_processed_at from public.games where id = (select id from g) $$,
   $$ values ('closed'::text, null::uuid, null::timestamptz) $$,
   'reset: game reopened (closed), MVP cleared, marked for recalculation'
+);
+
+select results_eq(
+  $$ select matches, goals, mvp_count from public.leaderboard((select id from ctx)) where player_id = pg_temp.pid('Олжас') $$,
+  $$ values (0, 0, 0) $$,
+  'reset: the leaderboard no longer counts the game'
+);
+select is(
+  (select count(*)::int from public.game_history((select id from ctx))), 0,
+  'reset: the game left the history of finished games'
+);
+
+select pg_temp.login(pg_temp.u(1));
+select throws_ok(
+  $$ select public.update_game((select id from g), 'x', now(), '') $$,
+  '42501', 'not_organizer', 'a player cannot edit the game'
+);
+select pg_temp.login(pg_temp.u(0));
+select public.update_game((select id from g), '  Кубок  ', now() + interval '3 hours', 'Арена');
+select results_eq(
+  $$ select title, place from public.games where id = (select id from g) $$,
+  $$ values ('Кубок'::text, 'Арена'::text) $$,
+  'organizer edits title and place'
+);
+select public.update_game_format((select id from g), 3, 6, null, 2);
+select results_eq(
+  $$ select g.match_periods::int, m.periods::int, m.period_seconds, m.goal_limit
+     from public.games g join public.matches m on m.game_id = g.id where g.id = (select id from g) $$,
+  $$ values (2, 2, 360, 3) $$,
+  'format with periods applies to not-started matches'
 );
 
 select public.delete_game((select id from t where k = 'g2'));

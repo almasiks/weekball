@@ -10,6 +10,8 @@ create function pg_temp.u(n int) returns uuid language sql as $$
 $$;
 
 insert into auth.users (id, email) select pg_temp.u(n), 'f' || n || '@test.local' from generate_series(0, 4) n;
+-- Roster mode: players.id is independent of auth.uid(); these tests keep them equal for readability.
+insert into public.players (id, user_id, name) select id, id, 'tmp' from auth.users where email like '%@test.local';
 
 set local role authenticated;
 select pg_temp.login(pg_temp.u(0));

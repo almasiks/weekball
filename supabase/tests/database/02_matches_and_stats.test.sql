@@ -9,6 +9,8 @@ $$;
 insert into auth.users (id, email)
 select ('00000000-0000-4000-8000-0000000002' || lpad(n::text, 2, '0'))::uuid, 'u' || n || '@test.local'
 from generate_series(0, 9) n;
+-- Roster mode: players.id is independent of auth.uid(); these tests keep them equal for readability.
+insert into public.players (id, user_id, name) select id, id, 'tmp' from auth.users where email like '%@test.local';
 
 set local role authenticated;
 select pg_temp.login('00000000-0000-4000-8000-000000000200');

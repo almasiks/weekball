@@ -10,6 +10,8 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000401', 'so@test.local'),
   ('00000000-0000-4000-8000-000000000402', 'sp@test.local'),
   ('00000000-0000-4000-8000-000000000403', 'sx@test.local');
+-- Roster mode: players.id is independent of auth.uid(); these tests keep them equal for readability.
+insert into public.players (id, user_id, name) select id, id, 'tmp' from auth.users where email like '%@test.local';
 
 set local role authenticated;
 select pg_temp.login('00000000-0000-4000-8000-000000000401');

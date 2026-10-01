@@ -14,6 +14,8 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000103', 'p2@test.local'),
   ('00000000-0000-4000-8000-000000000104', 'p3@test.local'),
   ('00000000-0000-4000-8000-000000000199', 'outsider@test.local');
+-- Roster mode: players.id is independent of auth.uid(); these tests keep them equal for readability.
+insert into public.players (id, user_id, name) select id, id, 'tmp' from auth.users where email like '%@test.local';
 
 -- --------------------------------------------------------------- RLS audit
 select is(

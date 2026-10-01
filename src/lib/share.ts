@@ -100,7 +100,14 @@ export function gameSummaryText(input: {
   matches: ResultMatch[];
   standings: { name: string; color: string; points: number; goals_for: number; goals_against: number }[];
   url: string;
+  mvp?: string | null;
+  topScorers?: { name: string; goals: number }[];
 }): string {
+  const scorers = input.topScorers ?? [];
+  const extras = [
+    input.mvp ? `⭐ Игрок вечера: ${input.mvp}` : null,
+    scorers.length ? `⚽ Бомбардир: ${scorers.map((s) => s.name).join(", ")} — ${scorers[0].goals}` : null,
+  ].filter((l): l is string => l !== null);
   const byId = new Map(input.teams.map((t) => [t.id, t]));
   const results = input.matches
     .filter((m) => m.status === "finished")
@@ -115,6 +122,7 @@ export function gameSummaryText(input: {
     "",
     "Таблица:",
     ...table,
+    ...(extras.length ? ["", ...extras] : []),
     "",
     `Ссылка: ${input.url}`,
   ].join("\n");

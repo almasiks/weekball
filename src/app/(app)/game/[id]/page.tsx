@@ -199,6 +199,8 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
                   matches: matchData.matches,
                   standings: matchData.standings,
                   url: `${siteUrl}/game/${id}`,
+                  mvp: playerStats.find((s) => s.player_id === view.game.mvp_player_id)?.name ?? null,
+                  topScorers,
                 }),
               )}
               target="_blank"

@@ -64,10 +64,10 @@ test("match format: goal limit ends the match, undo reopens it, time runs out", 
 
   // --- Time runs out: 1-minute matches, 0:0 -> draw.
   await organizer.goto(gameUrl);
-  await organizer.getByRole("button", { name: "Изменить формат матча" }).click();
+  await organizer.getByRole("button", { name: "Редактировать игру" }).click();
   await organizer.getByLabel("Длительность, мин").fill("1");
   await organizer.getByRole("button", { name: "Сохранить" }).click();
-  await expect(organizer.getByText("до 2 голов · 1 мин")).toBeVisible();
+  await expect(organizer.getByRole("dialog")).toBeHidden();
 
   await organizer.goto(`${gameUrl}/live`);
   await expect(organizer.getByText("до 2 голов · 1 мин").first()).toBeVisible();

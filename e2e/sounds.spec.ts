@@ -71,10 +71,13 @@ test("sound board: built-in + own sounds, auto sounds, works offline", async ({ 
   await organizer.locator('a[href^="/game/"]').first().click();
   await organizer.waitForURL(/\/game\/[0-9a-f-]{36}$/);
   const gameUrl = organizer.url();
-  await organizer.getByRole("button", { name: "Изменить формат матча" }).click();
+  await organizer.getByRole("button", { name: "Редактировать игру" }).click();
   await organizer.getByLabel("Длительность, мин").fill("2");
   await organizer.getByRole("button", { name: "Сохранить" }).click();
-  await expect(organizer.getByText(/до 2 голов · 2 мин · автозвуки вкл/)).toBeVisible();
+  await expect(organizer.getByRole("dialog")).toBeHidden();
+  await organizer.getByRole("button", { name: "Инфо" }).click();
+  await expect(organizer.getByText("до 2 голов · 2 мин")).toBeVisible();
+  await organizer.getByRole("dialog").getByRole("button", { name: "Закрыть" }).first().click();
   await organizer.getByRole("link", { name: "Разделить на команды" }).click();
   await organizer.getByRole("button", { name: "2 команды" }).click();
   await organizer.getByRole("button", { name: "Собрать автоматически" }).click();

@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
   const { data: pending, error } = await admin
     .from("games")
     .select("group_id")
-    .eq("status", "finished")
+
+
     .is("stats_processed_at", null);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

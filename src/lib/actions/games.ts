@@ -104,25 +104,6 @@ function readScheduleForm(formData: FormData): ScheduleInput | string {
   return { weekday, start_time: startTime, place, max_players: maxPlayers, ...format };
 }
 
-// Per-game format (organizer, on the game page). Not-yet-started matches follow it.
-export async function saveGameFormatAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  const gameId = readText(formData, "gameId");
-  const format = readFormat(formData);
-  if (typeof format === "string") return { error: format };
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("update_game_format", {
-    p_game_id: gameId,
-    p_goal_limit: format.goal_limit,
-    p_match_minutes: format.match_minutes,
-    p_auto_sounds: formData.get("autoSounds") === "on",
-  });
-  if (error) return { error: toMessage(error) };
-  revalidateGame(gameId);
-  revalidatePath(`/game/${gameId}/live`);
-  return { ok: true };
-}
-
 async function requireOrganizerGroup() {
   const ctx = await getAppContext();
   if (!ctx.group || ctx.role !== "organizer") return null;

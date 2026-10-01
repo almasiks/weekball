@@ -91,6 +91,12 @@ export function zonedTimeToUtc(date: string, time: string, timeZone: string): Da
   return new Date(result);
 }
 
+// UTC instant -> { date: "YYYY-MM-DD", time: "HH:MM" } in `timeZone` (form defaults).
+export function utcToZonedInputs(iso: string, timeZone: string): { date: string; time: string } {
+  const p = zonedParts(new Date(iso), timeZone);
+  return { date: `${p.year}-${pad(p.month)}-${pad(p.day)}`, time: `${pad(p.hour)}:${pad(p.minute)}` };
+}
+
 // Today's date "YYYY-MM-DD" in the given timezone (for <input type="date"> defaults).
 export function todayInZone(timeZone: string): string {
   const p = zonedParts(new Date(), timeZone);

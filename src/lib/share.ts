@@ -120,6 +120,49 @@ export function gameSummaryText(input: {
   ].join("\n");
 }
 
+type BestPlayer = { name: string; goals: number; assists: number; wins: number };
+
+// "🏅 Лучшие игроки: Сб, 4 окт, 19:00\n⭐ Игрок вечера: Иван\n1. Иван — 3 ⚽, 1 🅰️, 2 победы\n…"
+export function bestPlayersText(input: {
+  startsAt: string;
+  timezone: string;
+  mvp: string | null;
+  players: BestPlayer[];
+  url: string;
+}): string {
+  const line = (p: BestPlayer, i: number) => {
+    const parts = [
+      p.goals ? `${p.goals} ⚽` : null,
+      p.assists ? `${p.assists} 🅰️` : null,
+      p.wins ? `побед: ${p.wins}` : null,
+    ].filter(Boolean);
+    return `${i + 1}. ${p.name}${parts.length ? ` — ${parts.join(", ")}` : ""}`;
+  };
+  return [
+    `🏅 Лучшие игроки: ${formatGameDate(input.startsAt, input.timezone)}`,
+    input.mvp ? `⭐ Игрок вечера: ${input.mvp}` : null,
+    ...input.players.map(line),
+    "",
+    `Ссылка: ${input.url}`,
+  ]
+    .filter((l) => l !== null)
+    .join("\n");
+}
+
+// Ranking for "Лучшие игроки": goals + assists, then wins, then fewer own goals.
+export function rankBestPlayers<T extends BestPlayer & { own_goals: number }>(rows: T[], limit = 5): T[] {
+  return [...rows]
+    .filter((r) => r.goals + r.assists + r.wins > 0)
+    .sort(
+      (a, b) =>
+        b.goals + b.assists - (a.goals + a.assists) ||
+        b.goals - a.goals ||
+        b.wins - a.wins ||
+        a.own_goals - b.own_goals,
+    )
+    .slice(0, limit);
+}
+
 export function whatsappUrl(text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }

@@ -15,7 +15,8 @@ export async function recalcGroupRatings(client: Client, groupId: string) {
     .from("games")
     .select("id, starts_at")
     .eq("group_id", groupId)
-    .eq("status", "finished");
+
+
   if (gamesError) throw gamesError;
 
   const gameIds = (games ?? []).map((g) => g.id);

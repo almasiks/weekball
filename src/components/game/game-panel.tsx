@@ -11,17 +11,8 @@ import { SignupButtons } from "@/components/game/signup-buttons";
 import { formatGameDate } from "@/lib/datetime";
 import { gameShareText, whatsappUrl } from "@/lib/share";
 import type { GameView, SignupEntry } from "@/lib/games";
-import type { GameStatus } from "@/lib/supabase/database.types";
+import { STATUS_LABEL } from "@/lib/game-status";
 import { cn } from "@/lib/utils";
-
-const STATUS_LABEL: Record<GameStatus, string> = {
-  signup: "Запись открыта",
-  closed: "Запись закрыта",
-  teams: "Делим команды",
-  live: "Идёт игра",
-  finished: "Игра завершена",
-  cancelled: "Игра отменена",
-};
 
 type Props = {
   view: GameView;
@@ -56,8 +47,11 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
   });
 
   const title = (
-    <span className="text-xl font-semibold tracking-tight">
-      {formatGameDate(game.starts_at, game.timezone)}
+    <span className="flex flex-col">
+      {game.title && <span className="text-sm font-medium text-muted-foreground">{game.title}</span>}
+      <span className="text-xl font-semibold tracking-tight">
+        {formatGameDate(game.starts_at, game.timezone)}
+      </span>
     </span>
   );
 

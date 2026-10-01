@@ -146,7 +146,8 @@ export async function getGamePreview(gameId: string) {
     admin
       .from("games")
       .select("starts_at, place, max_players, timezone, status, groups(name)")
-      .eq("id", gameId)
+
+
       .maybeSingle(),
     admin
       .from("signups")

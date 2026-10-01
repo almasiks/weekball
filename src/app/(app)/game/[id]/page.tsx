@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, MessageCircle, Swords, Timer, Users } from "lucide-react";
+import { ChevronLeft, MessageCircle, Swords, Timer, UserCheck, Users } from "lucide-react";
 import { MatchesOverview } from "@/components/match/matches-overview";
 import { RecalcButton } from "@/components/stats/recalc-button";
-import { GameFormatEditor } from "@/components/game/game-format-editor";
+import { GameCards } from "@/components/game/game-cards";
+import { GameStatsTable } from "@/components/game/game-stats-table";
 import { createClient } from "@/lib/supabase/server";
 import { getMatchData } from "@/lib/match/load";
 import { gameSummaryText, whatsappUrl } from "@/lib/share";
@@ -20,6 +21,9 @@ import { formatGameDate } from "@/lib/datetime";
 import { getGamePreview, getGameView } from "@/lib/games";
 import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
+
+const organizerTile =
+  "flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl bg-card p-2 text-center text-xs font-medium ring-1 ring-foreground/10 hover:bg-muted/60";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -89,6 +93,12 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
     ? ((await supabase.rpc("game_top_scorers", { p_game_id: view.game.id })).data ?? [])
     : [];
   const siteUrl = await getSiteUrl();
+  const playerStats = view.teams.length
+    ? ((await supabase.rpc("game_player_stats", { p_game_id: view.game.id })).data ?? [])
+    : [];
+  const creatorName = view.game.created_by
+    ? ((await supabase.from("players").select("name").eq("id", view.game.created_by).maybeSingle()).data?.name ?? null)
+    : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -106,22 +116,27 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
       />
 
       {isOrganizer && teamsEditable && (
-        <GameFormatEditor
-          gameId={view.game.id}
-          goalLimit={view.game.goal_limit}
-          matchMinutes={view.game.match_minutes}
-          autoSounds={view.game.auto_sounds}
-        />
-      )}
-
-      {isOrganizer && canRunMatch && (
-        <Link
-          href={`/game/${id}/live`}
-          className={cn(buttonVariants({ size: "lg" }), "h-14 w-full text-base")}
-        >
-          <Timer aria-hidden />
-          {view.game.status === "live" ? "Вести матч" : "Начать матч"}
-        </Link>
+        <nav aria-label="Организатору" className="grid grid-cols-3 gap-2">
+          <Link href={`/game/${id}/checkin`} className={organizerTile}>
+            <UserCheck className="size-5" aria-hidden />
+            Отметить пришедших
+          </Link>
+          <Link href={`/game/${id}/teams`} className={organizerTile}>
+            <Users className="size-5" aria-hidden />
+            {view.teams.length ? "Команды" : "Разделить на команды"}
+          </Link>
+          {canRunMatch ? (
+            <Link href={`/game/${id}/live`} className={cn(organizerTile, "bg-primary text-primary-foreground hover:bg-primary/90")}>
+              <Timer className="size-5" aria-hidden />
+              {view.game.status === "live" ? "Вести матч" : "Матч"}
+            </Link>
+          ) : (
+            <span className={cn(organizerTile, "text-muted-foreground opacity-60")} aria-disabled="true">
+              <Timer className="size-5" aria-hidden />
+              Матч — после команд
+            </span>
+          )}
+        </nav>
       )}
 
       {isOrganizer && view.game.status === "finished" && (
@@ -204,15 +219,6 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
         </Link>
       )}
 
-      {isOrganizer && !view.game.draft_active && teamsEditable && (
-        <Link
-          href={`/game/${id}/teams`}
-          className={cn(buttonVariants({ size: "lg", variant: "secondary" }), "w-full")}
-        >
-          <Users aria-hidden />
-          {view.teams.length ? "Команды" : "Разделить на команды"}
-        </Link>
-      )}
 
       {view.game.teams_published_at && view.teams.length > 0 && (
         <section className="flex flex-col gap-3">
@@ -230,6 +236,34 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
           />
         </section>
       )}
+
+      {view.teams.length > 0 && <GameStatsTable rows={playerStats} mvpId={view.game.mvp_player_id} />}
+
+      <GameCards
+        game={{
+          id: view.game.id,
+          title: view.game.title,
+          startsAt: view.game.starts_at,
+          timezone: view.game.timezone,
+          place: view.game.place,
+          status: view.game.status,
+          maxPlayers: view.game.max_players,
+          goalLimit: view.game.goal_limit,
+          matchMinutes: view.game.match_minutes,
+          periods: view.game.match_periods,
+          autoSounds: view.game.auto_sounds,
+          liveToken: isOrganizer ? view.game.live_token : null,
+          mvpId: view.game.mvp_player_id,
+        }}
+        stats={playerStats}
+        isOrganizer={isOrganizer}
+        teamCount={view.teams.length}
+        teamsEditable={teamsEditable}
+        goingCount={view.going.length}
+        presentCount={view.going.filter((s) => s.arrival === "arrived").length}
+        creatorName={creatorName}
+        siteUrl={siteUrl}
+      />
 
       {isOrganizer && (
         <>

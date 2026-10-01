@@ -102,7 +102,7 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-bold tracking-tight">
             {player.name}
-            {player.id === ctx.userId && <span className="text-base font-normal text-muted-foreground"> (вы)</span>}
+            {player.id === ctx.playerId && <span className="text-base font-normal text-muted-foreground"> (вы)</span>}
           </h1>
           <p className="text-sm text-muted-foreground">
             {positionLabel(player.position)} · уровень {player.level}

@@ -112,7 +112,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       {nextView ? (
         <GamePanel
           view={nextView}
-          userId={ctx.userId}
+          userId={ctx.playerId}
           gameUrl={`${siteUrl}/game/${nextView.game.id}`}
           linkToGame
         />

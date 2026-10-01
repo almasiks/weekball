@@ -22,7 +22,7 @@ test("organizer creates a group, a player joins by link and signs up", async ({ 
   await expect(player.getByRole("button", { name: "Иду", exact: true })).toHaveAttribute("aria-pressed", "true");
 
   // The organizer sees the player in the members list and in the game.
-  await organizer.goto("/members");
+  await organizer.goto("/roster");
   await expect(organizer.getByText(name)).toBeVisible();
   await organizer.goto("/");
   await expect(organizer.getByText(name)).toBeVisible();

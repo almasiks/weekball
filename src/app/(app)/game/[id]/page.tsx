@@ -101,7 +101,7 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
       </Link>
       <GamePanel
         view={view}
-        userId={ctx.userId}
+        userId={ctx.playerId}
         gameUrl={`${siteUrl}/game/${view.game.id}`}
       />
 
@@ -217,7 +217,7 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
       {view.game.teams_published_at && view.teams.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">Составы</h2>
-          <TeamsList teams={view.teams} userId={ctx.userId} />
+          <TeamsList teams={view.teams} userId={ctx.playerId} />
           <ShareTeamsButton
             startsAt={view.game.starts_at}
             timezone={view.game.timezone}

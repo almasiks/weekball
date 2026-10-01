@@ -38,5 +38,5 @@ export async function joinGroup(page: Page, invite: string, name: string) {
   await page.goto(new URL(invite).pathname);
   await page.getByLabel("Ваше имя").fill(name);
   await page.getByRole("button", { name: "Вступить в группу" }).click();
-  await expect(page).toHaveURL(/\/members/);
+  await expect(page).toHaveURL(/\/roster/);
 }

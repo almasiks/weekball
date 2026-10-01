@@ -51,7 +51,7 @@ export default async function TeamsPage({ params }: PageProps<"/game/[id]/teams"
       {!editable ? (
         <Notice variant="error">Игра отменена или завершена — составы менять нельзя.</Notice>
       ) : view.game.draft_active ? (
-        <DraftPanel view={view} userId={ctx.userId} isOrganizer={isOrganizer} />
+        <DraftPanel view={view} userId={ctx.playerId} isOrganizer={isOrganizer} />
       ) : view.going.length === 0 ? (
         <Notice>На игру пока никто не записан — делить некого.</Notice>
       ) : (

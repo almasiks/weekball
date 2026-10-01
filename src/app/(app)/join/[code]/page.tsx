@@ -11,6 +11,7 @@ import {
 import { JoinGroupForm } from "@/components/join-group-form";
 import { Notice } from "@/components/notice";
 import { getAppContext } from "@/lib/session";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Приглашение" };
 
@@ -39,18 +40,25 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
     );
   }
 
+  // Unclaimed roster names ("Это я"). Not offered when this account already has a player.
+  const supabase = await createClient();
+  const { data: claimable } = ctx.player
+    ? { data: [] }
+    : await supabase.rpc("group_claimable_players", { p_code: code });
+
   // The group name is only visible to members (RLS), so we show it after joining.
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-xl">Вас пригласили в группу</CardTitle>
         <CardDescription>
-          Введите имя — так вас увидят в списке игроков и составах. Пароль не
-          нужен.
+          {claimable?.length
+            ? "Найдите себя в списке — вся ваша статистика сохранится. Пароль не нужен."
+            : "Введите имя — так вас увидят в списке игроков и составах. Пароль не нужен."}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <JoinGroupForm code={code} defaultName={ctx.player?.name} />
+        <JoinGroupForm code={code} defaultName={ctx.player?.name} claimable={claimable ?? []} />
       </CardContent>
     </Card>
   );

@@ -81,7 +81,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
         <CardContent>
           <MemberList
             members={members}
-            currentUserId={ctx.userId}
+            currentUserId={ctx.playerId}
             action={(member) => (
               <MemberRoleButton
                 playerId={member.playerId}

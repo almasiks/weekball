@@ -178,7 +178,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
                         <span className="flex min-w-0 flex-col">
                           <span className="truncate font-medium">
                             {r.name}
-                            {r.player_id === ctx.userId && <span className="text-muted-foreground"> (вы)</span>}
+                            {r.player_id === ctx.playerId && <span className="text-muted-foreground"> (вы)</span>}
                           </span>
                           <FormDots form={r.form} />
                         </span>

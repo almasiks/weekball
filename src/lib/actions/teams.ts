@@ -203,6 +203,6 @@ export async function setPlayerLevelAction(playerId: string, level: number): Pro
     p_level: level,
   });
   if (error) return { error: toMessage(error) };
-  revalidatePath("/members");
+  revalidatePath("/roster");
   return {};
 }

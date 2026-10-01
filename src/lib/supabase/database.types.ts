@@ -55,6 +55,11 @@ export type GameRow = {
   goal_limit: number | null;
   match_minutes: number;
   auto_sounds: boolean;
+  title: string | null;
+  deleted_at: string | null;
+  created_by: string | null;
+  match_periods: number;
+  mvp_player_id: string | null;
 };
 
 export type SoundRow = {
@@ -75,6 +80,7 @@ export type MatchRow = LiveMatch & {
 };
 
 export type EventRow = LiveEvent & {
+  void_reason: "manual" | "reset" | null;
   game_id: string;
   created_by: string | null;
   created_at: string;
@@ -104,6 +110,24 @@ export type LeaderboardRow = {
   attendance_pct: number;
   no_shows: number;
   form: string; // oldest -> newest, e.g. "WDLWW"
+  mvp_count: number;
+};
+
+export type GamePlayerStatRow = {
+  player_id: string;
+  name: string;
+  team_id: string;
+  team_name: string;
+  team_color: string;
+  matches: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goals: number;
+  assists: number;
+  own_goals: number;
+  yellows: number;
+  reds: number;
 };
 
 export type GameHistoryRow = {
@@ -154,6 +178,10 @@ export type Database = {
           rating: number;
           rated_games: number;
           created_at: string;
+          user_id: string | null;
+          created_by: string | null;
+          is_regular: boolean;
+          archived_at: string | null;
         };
         Insert: never;
         Update: {
@@ -354,7 +382,7 @@ export type Database = {
         Returns: GroupRow;
       };
       join_group: {
-        Args: { code: string; player_name: string };
+        Args: { code: string; player_name: string; p_claim_player_id?: string | null };
         Returns: GroupRow;
       };
       create_upcoming_games: {
@@ -448,6 +476,7 @@ export type Database = {
           p_goal_limit: number | null;
           p_match_minutes: number;
           p_auto_sounds?: boolean | null;
+          p_periods?: number | null;
         };
         Returns: GameRow;
       };
@@ -461,6 +490,39 @@ export type Database = {
         Returns: string | null;
       };
       get_live_game: { Args: { p_token: string }; Returns: unknown };
+      group_claimable_players: { Args: { p_code: string }; Returns: { id: string; name: string }[] };
+      add_players: { Args: { p_group_id: string; p_names: string[] }; Returns: PlayerRow[] };
+      rename_player: { Args: { p_player_id: string; p_name: string }; Returns: undefined };
+      set_player_position: {
+        Args: { p_player_id: string; p_position: PlayerPosition | null };
+        Returns: undefined;
+      };
+      set_player_archived: { Args: { p_player_id: string; p_archived: boolean }; Returns: undefined };
+      unlink_player: { Args: { p_player_id: string }; Returns: undefined };
+      merge_players: { Args: { p_from: string; p_to: string }; Returns: undefined };
+      set_attendance: {
+        Args: { p_game_id: string; p_player_id: string; p_present: boolean };
+        Returns: unknown;
+      };
+      create_player_quick: {
+        Args: {
+          p_game_id: string;
+          p_name: string;
+          p_is_regular?: boolean;
+          p_position?: PlayerPosition | null;
+          p_level?: number | null;
+          p_player_id?: string | null;
+        };
+        Returns: PlayerRow;
+      };
+      update_game: {
+        Args: { p_game_id: string; p_title: string | null; p_starts_at: string; p_place: string };
+        Returns: GameRow;
+      };
+      set_game_mvp: { Args: { p_game_id: string; p_player_id: string | null }; Returns: undefined };
+      reset_game_results: { Args: { p_game_id: string }; Returns: undefined };
+      delete_game: { Args: { p_game_id: string }; Returns: undefined };
+      game_player_stats: { Args: { p_game_id: string }; Returns: GamePlayerStatRow[] };
       server_time: { Args: Record<string, never>; Returns: string };
       leaderboard: { Args: { p_group_id: string; p_from?: string | null }; Returns: LeaderboardRow[] };
       player_profile: { Args: { p_group_id: string; p_player_id: string }; Returns: unknown };
@@ -497,3 +559,5 @@ export type Database = {
     CompositeTypes: Record<never, never>;
   };
 };
+
+export type PlayerRow = Database["public"]["Tables"]["players"]["Row"];

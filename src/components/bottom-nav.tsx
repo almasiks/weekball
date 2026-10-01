@@ -9,7 +9,7 @@ export function BottomNav({ isOrganizer }: { isOrganizer: boolean }) {
   const pathname = usePathname();
   const items: { href: string; label: string; icon: typeof House; also?: string[] }[] = [
     { href: "/", label: "Главная", icon: House },
-    { href: "/members", label: "Участники", icon: Users },
+    { href: "/roster", label: "Состав", icon: Users, also: ["/members"] },
     { href: "/stats", label: "Статистика", icon: ChartColumn, also: ["/players", "/history"] },
     ...(isOrganizer
       ? [{ href: "/admin", label: "Админ", icon: ShieldCheck }]

@@ -56,7 +56,9 @@ export async function joinGroupAction(
 ): Promise<FormState> {
   const code = readText(formData, "code");
   const playerName = readText(formData, "playerName");
-  if (!playerName || playerName.length > 40) {
+  // "Это я": link this account to a roster name (keeps all of its history).
+  const claimPlayerId = readText(formData, "claimPlayerId") || null;
+  if (!claimPlayerId && (!playerName || playerName.length > 40)) {
     return { error: ERROR_MESSAGES.invalid_player_name };
   }
 
@@ -66,11 +68,12 @@ export async function joinGroupAction(
   const { error } = await supabase.rpc("join_group", {
     code,
     player_name: playerName,
+    p_claim_player_id: claimPlayerId,
   });
   if (error) return { error: toMessage(error) };
 
   revalidatePath("/", "layout");
-  redirect("/members?joined=1");
+  redirect("/roster?joined=1");
 }
 
 export async function setMemberRoleAction(

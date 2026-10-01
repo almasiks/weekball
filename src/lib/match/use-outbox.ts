@@ -24,12 +24,29 @@ function idbStorage(key: string): QueueStorage {
   };
 }
 
-async function sendItem(supabase: ReturnType<typeof createClient>, item: QueueItem): Promise<SendResult> {
+async function sendItem(
+  supabase: ReturnType<typeof createClient>,
+  gameId: string,
+  item: QueueItem,
+): Promise<SendResult> {
   let error: { code?: string; message?: string } | null = null;
   if (item.kind === "event") {
     ({ error } = await supabase.rpc("add_event", { payload: item.payload }));
   } else if (item.kind === "void") {
     ({ error } = await supabase.rpc("void_event", { p_event_id: item.eventId }));
+  } else if (item.kind === "attendance") {
+    ({ error } = await supabase.rpc("set_attendance", {
+      p_game_id: gameId,
+      p_player_id: item.playerId,
+      p_present: item.present,
+    }));
+  } else if (item.kind === "new_player") {
+    ({ error } = await supabase.rpc("create_player_quick", {
+      p_game_id: gameId,
+      p_name: item.name,
+      p_is_regular: item.isRegular,
+      p_player_id: item.playerId,
+    }));
   } else {
     const base = { p_match_id: item.matchId, p_client_ts: item.clientTs };
     const cmd = item.command;
@@ -68,7 +85,7 @@ export function useOutbox(gameId: string, onSent: () => void, serverVersion: unk
     const supabase = createClient();
     const queue = new OutboxQueue(
       idbStorage(`weekball:outbox:${gameId}`),
-      (item) => sendItem(supabase, item),
+      (item) => sendItem(supabase, gameId, item),
       (item) => {
         setSent((s) => [...s, item]);
         onSentRef.current();

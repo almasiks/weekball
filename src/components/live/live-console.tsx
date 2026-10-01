@@ -132,7 +132,7 @@ export function LiveConsole(props: Props) {
         );
       } else if (item.kind === "event") {
         if (!es.some((e) => e.id === item.payload.id)) es = [...es, item.payload];
-      } else {
+      } else if (item.kind === "void") {
         es = es.filter((e) => e.id !== item.eventId);
         voidedAt.set(item.eventId, item.createdAt);
       }
@@ -772,5 +772,7 @@ function describeEvent(e: Pick<LiveEvent, "type" | "player_id">, names: Record<s
 function describeItem(item: QueueItem, names: Record<string, string>) {
   if (item.kind === "event") return describeEvent(item.payload, names);
   if (item.kind === "void") return "отмена события";
+  if (item.kind === "attendance") return "отметка прихода";
+  if (item.kind === "new_player") return `новый игрок «${item.name}»`;
   return "команда таймера";
 }

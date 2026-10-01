@@ -86,7 +86,12 @@ const signature = (teams: string[][]) =>
 
 // Auto-balance all non-locked players. Tries a few seeds so "Пересобрать"
 // always shows a different split when one exists.
-export async function autoBuildAction(gameId: string, seed: number): Promise<ActionResult> {
+// presentOnly: build only from players marked as arrived (locked players always stay).
+export async function autoBuildAction(
+  gameId: string,
+  seed: number,
+  presentOnly = false,
+): Promise<ActionResult> {
   const view = await getGameView(gameId);
   if (!view) return { error: errorMessage("game_not_found") };
   if (view.teams.length < 2) return { error: "Сначала создайте 2 или 3 команды." };
@@ -99,7 +104,12 @@ export async function autoBuildAction(gameId: string, seed: number): Promise<Act
       if (p.isLocked) locked[p.playerId] = index;
     }),
   );
-  const players = view.going.map((p) => ({
+  const lockedIds = new Set(view.teams.flatMap((t) => t.players.filter((p) => p.isLocked).map((p) => p.playerId)));
+  const pool = presentOnly
+    ? view.going.filter((p) => p.arrival === "arrived" || lockedIds.has(p.playerId))
+    : view.going;
+  if (pool.length === 0) return { error: "Сначала отметьте, кто пришёл." };
+  const players = pool.map((p) => ({
     id: p.playerId,
     position: p.position,
     strength: playerStrength(p),
@@ -205,4 +215,17 @@ export async function setPlayerLevelAction(playerId: string, level: number): Pro
   if (error) return { error: toMessage(error) };
   revalidatePath("/roster");
   return {};
+}
+
+// New player on the spot from the team builder: created, marked present, lands in "unassigned".
+export async function quickAddPlayerAction(
+  gameId: string,
+  name: string,
+  isRegular: boolean,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  return rpcResult(
+    gameId,
+    supabase.rpc("create_player_quick", { p_game_id: gameId, p_name: name, p_is_regular: isRegular }),
+  );
 }

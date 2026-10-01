@@ -34,6 +34,7 @@ import { PlayerChip, type ChipPlayer } from "@/components/teams/player-chip";
 import { TeamEditor } from "@/components/teams/team-editor";
 import { TeamHeader } from "@/components/teams/team-header";
 import { ShareTeamsButton } from "@/components/teams/share-teams-button";
+import { QuickAddPlayer } from "@/components/teams/quick-add-player";
 import {
   addLatePlayerAction,
   autoBuildAction,
@@ -91,8 +92,13 @@ export function TeamsBoard({ view, shareUrl }: Props) {
       .map((p) => meta.get(p.playerId)!);
     return { view: t, players, strength: players.reduce((s, p) => s + playerStrength(p), 0) };
   });
-  const unassigned = going.filter((p) => !assignment[p.playerId]).map((p) => meta.get(p.playerId)!);
-  const assignedCount = going.length - unassigned.length;
+  // Pool: "only present" (default as soon as someone is checked in) or everyone signed up.
+  const presentCount = going.filter((p) => p.arrival === "arrived").length;
+  const [poolMode, setPoolMode] = useState<"present" | "all" | null>(null);
+  const presentOnly = (poolMode ?? (presentCount > 0 ? "present" : "all")) === "present";
+  const allUnassigned = going.filter((p) => !assignment[p.playerId]).map((p) => meta.get(p.playerId)!);
+  const unassigned = presentOnly ? allUnassigned.filter((p) => p.arrival === "arrived") : allUnassigned;
+  const assignedCount = going.length - allUnassigned.length;
   const gap = columns.length >= 2 ? strengthGapPercent(columns.map((c) => c.strength)) : null;
   const suggestion = suggestTeamCount(going.length);
   const published = !!game.teams_published_at;
@@ -181,7 +187,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
               size="lg"
               disabled={pending || going.length === 0}
               onClick={() =>
-                run(() => autoBuildAction(game.id, Math.floor(Math.random() * 2 ** 31)))
+                run(() => autoBuildAction(game.id, Math.floor(Math.random() * 2 ** 31), presentOnly))
               }
             >
               {assignedCount > captainIds.size ? <Shuffle aria-hidden /> : <Sparkles aria-hidden />}
@@ -223,6 +229,29 @@ export function TeamsBoard({ view, shareUrl }: Props) {
 
           {error && <Notice variant="error">{error}</Notice>}
 
+          <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Кого распределять">
+            {(
+              [
+                ["present", `Только пришедшие · ${presentCount}`],
+                ["all", `Все записавшиеся · ${going.length}`],
+              ] as const
+            ).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={(mode === "present") === presentOnly}
+                onClick={() => setPoolMode(mode)}
+                className={cn(
+                  "min-h-11 rounded-lg border px-2 text-sm font-medium",
+                  (mode === "present") === presentOnly ? "border-primary bg-primary/10 text-primary" : "bg-background",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <QuickAddPlayer gameId={game.id} />
+
           <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
             {/* Unassigned */}
             <DropZone id={UNASSIGNED} className="rounded-xl border border-dashed p-2">
@@ -231,7 +260,11 @@ export function TeamsBoard({ view, shareUrl }: Props) {
                 Не распределены · {unassigned.length}
               </h3>
               {unassigned.length === 0 ? (
-                <p className="px-1 py-2 text-sm text-muted-foreground">Все игроки в командах.</p>
+                <p className="px-1 py-2 text-sm text-muted-foreground">
+                  {presentOnly && allUnassigned.length > 0
+                    ? `Все пришедшие в командах. Не отмечены: ${allUnassigned.length}.`
+                    : "Все игроки в командах."}
+                </p>
               ) : (
                 <ul className="flex flex-col gap-1">
                   {unassigned.map((p) => (

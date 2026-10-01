@@ -18,7 +18,11 @@ type Base = {
 export type QueueItem =
   | (Base & { kind: "event"; matchId: string; payload: EventPayload })
   | (Base & { kind: "void"; matchId: string; eventId: string })
-  | (Base & { kind: "timer"; matchId: string; command: TimerCommand; clientTs: string });
+  | (Base & { kind: "timer"; matchId: string; command: TimerCommand; clientTs: string })
+  // Check-in ("кто пришёл"): idempotent on the server, last write wins.
+  | (Base & { kind: "attendance"; playerId: string; present: boolean })
+  // New player on the spot; playerId is generated on the device so retries are safe.
+  | (Base & { kind: "new_player"; playerId: string; name: string; isRegular: boolean });
 
 export type SendResult = { ok: true } | { ok: false; retry: boolean; error: string };
 

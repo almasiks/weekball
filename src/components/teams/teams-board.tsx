@@ -22,10 +22,12 @@ import {
   Shuffle,
   Sparkles,
   Swords,
+  Timer,
   UserPlus,
   Users,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Notice } from "@/components/notice";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { PlayerChip, type ChipPlayer } from "@/components/teams/player-chip";
@@ -314,6 +316,16 @@ export function TeamsBoard({ view, shareUrl }: Props) {
               )}
             </DragOverlay>
           </DndContext>
+
+          {teams.length >= 2 && assignedCount > 0 && (
+            <Link
+              href={`/game/${game.id}/live`}
+              className={cn(buttonVariants({ size: "lg" }), "h-14 w-full text-base")}
+            >
+              <Timer aria-hidden />
+              {game.status === "live" ? "Вести матч" : "Начать матч"}
+            </Link>
+          )}
 
           <ShareTeamsButton
             startsAt={game.starts_at}

@@ -70,6 +70,14 @@ export const stats = defineMessages({
     noGames: "Завершённых игр пока нет.",
     historyEmpty: "Завершённых игр пока нет. Они появятся здесь после «Завершить игру».",
     historyTopScorer: "Лучший бомбардир: {names} ⚽ {goals}",
+    editFor: "Изменить статистику: {name}",
+    editText:
+      "Впишите цифры, которые должны показываться за всё время. Новые матчи будут прибавляться к ним сами. Рейтинг и посещаемость считаются только по сыгранным матчам.",
+    editInvalid: "Впишите целые числа от 0 до 9999.",
+    editReset: "Вернуть подсчитанное по матчам",
+    editOnlyAllTime: "Менять цифры можно в режиме «Всё время».",
+    editOthers: "Остальные игроки",
+    adjusted: "цифры изменены вручную",
   },
   kk: {
     title: "Статистика",
@@ -135,6 +143,14 @@ export const stats = defineMessages({
     noGames: "Аяқталған ойындар әзірге жоқ.",
     historyEmpty: "Аяқталған ойындар әзірге жоқ. Олар «Ойынды аяқтау» басылғаннан кейін осында пайда болады.",
     historyTopScorer: "Үздік сұрмерген: {names} ⚽ {goals}",
+    editFor: "Статистиканы өзгерту: {name}",
+    editText:
+      "Барлық уақыт бойынша көрсетілуі керек сандарды енгізіңіз. Жаңа матчтар оларға өзі қосылады. Рейтинг пен қатысу тек ойналған матчтар бойынша есептеледі.",
+    editInvalid: "0-ден 9999-ға дейінгі бүтін сандарды енгізіңіз.",
+    editReset: "Матчтар бойынша есептелгенді қайтару",
+    editOnlyAllTime: "Сандарды «Барлық уақыт» режимінде өзгертуге болады.",
+    editOthers: "Қалған ойыншылар",
+    adjusted: "сандар қолмен өзгертілген",
   },
   en: {
     title: "Stats",
@@ -200,5 +216,13 @@ export const stats = defineMessages({
     noGames: "No finished games yet.",
     historyEmpty: "No finished games yet. They will appear here after “End the game”.",
     historyTopScorer: "Top scorer: {names} ⚽ {goals}",
+    editFor: "Edit stats: {name}",
+    editText:
+      "Enter the numbers that should be shown for all time. New matches are added on top by themselves. Rating and attendance are only calculated from played matches.",
+    editInvalid: "Enter whole numbers from 0 to 9999.",
+    editReset: "Back to what the matches give",
+    editOnlyAllTime: "Numbers can be changed in the “All time” view.",
+    editOthers: "Other players",
+    adjusted: "numbers edited by hand",
   },
 });

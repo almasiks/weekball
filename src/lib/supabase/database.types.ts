@@ -111,6 +111,8 @@ export type LeaderboardRow = {
   no_shows: number;
   form: string; // oldest -> newest, e.g. "WDLWW"
   mvp_count: number;
+  // The organizer set this player's all-time totals by hand (stat_adjustments).
+  adjusted: boolean;
 };
 
 export type GamePlayerStatRow = {
@@ -377,6 +379,21 @@ export type Database = {
     };
     Views: Record<never, never>;
     Functions: {
+      set_player_stats: {
+        Args: {
+          p_group_id: string;
+          p_player_id: string;
+          p_wins: number;
+          p_draws: number;
+          p_losses: number;
+          p_goals: number;
+          p_assists: number;
+          p_yellows: number;
+          p_reds: number;
+        };
+        Returns: undefined;
+      };
+      reset_player_stats: { Args: { p_group_id: string; p_player_id: string }; Returns: undefined };
       enter_app: { Args: { p_name: string }; Returns: PlayerRow };
       rename_me: { Args: { p_name: string }; Returns: PlayerRow };
       create_group: {

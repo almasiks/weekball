@@ -138,4 +138,66 @@ test("organizer runs a match (incl. offline goal), stats appear after finishing"
   await viewer.goto(`${gameUrl}/live`);
   await expect(viewer.getByText("Исправить матч")).toHaveCount(0);
   await expect(viewer.getByRole("button", { name: "⚽ Гол" })).toHaveCount(0);
+
+  // --- Numbers by hand, right in "Статистика" (the pencil in a row).
+  const edits = organizer.getByRole("button", { name: /^Изменить статистику: / });
+  const firstRow = (page: Page) => page.locator("tbody tr").first();
+  const save = async (fields: Record<string, string>) => {
+    const sheet = organizer.getByRole("dialog");
+    for (const [label, value] of Object.entries(fields)) await sheet.getByLabel(label, { exact: true }).fill(value);
+    await sheet.getByRole("button", { name: "Сохранить" }).click();
+    await expect(sheet).toHaveCount(0);
+  };
+  await organizer.goto("/stats?tab=scorers");
+  await expect(organizer.locator("tbody tr")).toHaveCount(1);
+  await edits.first().click();
+  await expect(organizer.getByRole("dialog").getByLabel("Голы", { exact: true })).toHaveValue("1"); // what the matches give
+  await save({ Голы: "7", Передачи: "4", Победы: "3" });
+  await expect(firstRow(organizer).getByRole("cell").nth(1)).toHaveText("7");
+  await expect(firstRow(organizer).getByLabel("цифры изменены вручную")).toBeVisible();
+
+  // Someone who is not in this table yet: from "Остальные игроки".
+  await organizer.getByText(/^Остальные игроки/).click();
+  await edits.last().click();
+  await save({ Голы: "9" });
+  await expect(organizer.locator("tbody tr")).toHaveCount(2);
+  await expect(firstRow(organizer).getByRole("cell").nth(1)).toHaveText("9");
+
+  // Bad input is refused with a hint.
+  await edits.first().click();
+  await organizer.getByRole("dialog").getByLabel("Голы", { exact: true }).fill("-2");
+  await organizer.getByRole("dialog").getByRole("button", { name: "Сохранить" }).click();
+  await expect(organizer.getByRole("dialog").getByText("Впишите целые числа от 0 до 9999.")).toBeVisible();
+  await organizer.getByRole("dialog").getByRole("button", { name: "Закрыть" }).first().click();
+
+  // Everybody sees the new numbers (also in the other tabs and the profile); only the organizer can edit.
+  await viewer.goto("/stats?tab=scorers");
+  await expect(viewer.locator("tbody tr")).toHaveCount(2);
+  await expect(firstRow(viewer).getByRole("cell").nth(1)).toHaveText("9");
+  await expect(viewer.getByRole("button", { name: /^Изменить статистику/ })).toHaveCount(0);
+  await viewer.goto("/stats?tab=assists");
+  await expect(firstRow(viewer).getByRole("cell").nth(1)).toHaveText("4");
+
+  // "Последние 10 игр" shows the matches only, and offers no editing.
+  await organizer.goto("/stats?tab=scorers&period=10");
+  await expect(firstRow(organizer).getByRole("cell").nth(1)).toHaveText("1");
+  await expect(edits).toHaveCount(0);
+  await expect(organizer.getByText("Менять цифры можно в режиме «Всё время».")).toBeVisible();
+
+  // Back to what the matches give.
+  await organizer.goto("/stats?tab=scorers");
+  await edits.first().click();
+  await organizer.getByRole("dialog").getByRole("button", { name: "Вернуть подсчитанное по матчам" }).click();
+  await expect(organizer.getByRole("dialog")).toHaveCount(0);
+  // The first row was the player with 9 hand-set goals and none in matches: gone from the scorers.
+  await expect(organizer.locator("tbody tr")).toHaveCount(1);
+  await expect(firstRow(organizer).getByRole("cell").nth(1)).toHaveText("7");
+  await expect(firstRow(organizer).getByLabel("цифры изменены вручную")).toBeVisible();
+
+  // The table with the pencils fits a 375 px phone.
+  await organizer.setViewportSize({ width: 375, height: 700 });
+  expect(await organizer.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  const pencil = await edits.first().boundingBox();
+  expect(pencil!.x + pencil!.width).toBeLessThanOrEqual(375);
+  expect(pencil!.width).toBeGreaterThanOrEqual(44);
 });

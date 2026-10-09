@@ -11,6 +11,8 @@ import type { LeaderboardRow } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
 import { getT } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n";
+import { StatsEditor } from "@/components/stats/stats-editor";
+import { Notice } from "@/components/notice";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getT())("stats.title") };
@@ -85,7 +87,30 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
   const period: StatsPeriod = params.period === "10" ? "10" : "all";
 
   const from = await periodStart(ctx.group.id, period);
-  const rows = (await getLeaderboard(ctx.group.id, from)).filter(tab.include).sort(tab.sort);
+  const all = await getLeaderboard(ctx.group.id, from);
+  const rows = all.filter(tab.include).sort(tab.sort);
+  // The organizer can set a player's all-time numbers by hand (pencil in the row).
+  const isOrganizer = ctx.role === "organizer";
+  const canEdit = isOrganizer && period === "all";
+  const others = canEdit
+    ? all.filter((r) => !tab.include(r)).sort((a, b) => a.name.localeCompare(b.name, "ru"))
+    : [];
+  const editor = (r: LeaderboardRow) => (
+    <StatsEditor
+      playerId={r.player_id}
+      name={r.name}
+      adjusted={r.adjusted}
+      totals={{
+        wins: r.wins,
+        draws: r.draws,
+        losses: r.losses,
+        goals: r.goals,
+        assists: r.assists,
+        yellows: r.yellows,
+        reds: r.reds,
+      }}
+    />
+  );
   const href = (next: { tab?: string; period?: string }) => {
     const q = new URLSearchParams({ tab: next.tab ?? tab.key, period: next.period ?? period });
     return `/stats?${q}`;
@@ -144,6 +169,8 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
         ))}
       </div>
 
+      {isOrganizer && !canEdit && <Notice>{tr("stats.editOnlyAllTime")}</Notice>}
+
       <Card>
         <CardContent>
           {rows.length === 0 ? (
@@ -161,6 +188,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
                       </abbr>
                     </th>
                   ))}
+                  {canEdit && <th className="w-11" />}
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -174,6 +202,12 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
                           <span className="truncate font-medium">
                             {r.name}
                             {r.player_id === ctx.playerId && <span className="text-muted-foreground"> {tr("common.you")}</span>}
+                            {r.adjusted && (
+                              <span className="text-muted-foreground" title={tr("stats.adjusted")} aria-label={tr("stats.adjusted")}>
+                                {" "}
+                                ✎
+                              </span>
+                            )}
                           </span>
                           <FormDots form={r.form} />
                         </span>
@@ -184,6 +218,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
                         {c.value(r)}
                       </td>
                     ))}
+                    {canEdit && <td className="text-right">{editor(r)}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -191,6 +226,23 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
           )}
         </CardContent>
       </Card>
+
+      {others.length > 0 && (
+        <details className="rounded-xl bg-card px-4 ring-1 ring-foreground/10">
+          <summary className="flex min-h-12 cursor-pointer items-center text-sm font-medium">
+            {tr("stats.editOthers")} · {others.length}
+          </summary>
+          <ul className="divide-y pb-2">
+            {others.map((r) => (
+              <li key={r.player_id} className="flex min-h-12 items-center gap-2">
+                <PlayerAvatar name={r.name} avatarUrl={r.avatar_url} className="size-8 text-sm" />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{r.name}</span>
+                {editor(r)}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

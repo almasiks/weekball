@@ -34,7 +34,7 @@ test("organizer runs a match (incl. offline goal), stats appear after finishing"
 
   // Live console: one period, kick-off
   await organizer.goto(gameUrl);
-  await organizer.getByRole("link", { name: "Начать матч" }).click();
+  await organizer.getByRole("link", { name: "Матч", exact: true }).click();
   await organizer.getByRole("button", { name: "Создать матч" }).click();
   await organizer.getByRole("button", { name: "Старт" }).click();
   await expect(organizer.getByRole("button", { name: "Пауза" })).toBeVisible();

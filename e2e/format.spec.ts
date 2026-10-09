@@ -26,7 +26,9 @@ test("match format: goal limit ends the match, undo reopens it, time runs out", 
   await organizer.locator('a[href^="/game/"]').first().click();
   await organizer.waitForURL(/\/game\/[0-9a-f-]{36}$/);
   const gameUrl = organizer.url();
+  await organizer.getByRole("button", { name: "Инфо" }).click();
   await expect(organizer.getByText("до 2 голов · 7 мин")).toBeVisible();
+  await organizer.getByRole("dialog").getByRole("button", { name: "Закрыть" }).first().click();
   await organizer.getByRole("link", { name: "Разделить на команды" }).click();
   await organizer.getByRole("button", { name: "2 команды" }).click();
   await organizer.getByRole("button", { name: "Собрать автоматически" }).click();

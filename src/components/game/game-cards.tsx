@@ -368,7 +368,8 @@ function EditGameForm({
   onDone: () => void;
 }) {
   const initial = utcToZonedInputs(game.startsAt, game.timezone);
-  const [count, setCount] = useState(teamCount >= 2 ? teamCount : 2);
+  // null = not chosen: saving other fields must not create teams by itself.
+  const [count, setCount] = useState<number | null>(teamCount >= 2 ? teamCount : null);
   const [state, formAction] = useActionState<FormState, FormData>(async (prev, formData) => {
     const result = await updateGameAction(prev, formData);
     if (result.ok) onDone();
@@ -379,8 +380,8 @@ function EditGameForm({
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="gameId" value={game.id} />
       <input type="hidden" name="timezone" value={game.timezone} />
-      <input type="hidden" name="teamCount" value={count} />
-      <input type="hidden" name="teamCountChanged" value={count !== teamCount ? "1" : "0"} />
+      <input type="hidden" name="teamCount" value={count ?? ""} />
+      <input type="hidden" name="teamCountChanged" value={count !== null && count !== teamCount ? "1" : "0"} />
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="edit-title">Название (необязательно)</Label>

@@ -22,6 +22,7 @@ import { getGamePreview, getGameView } from "@/lib/games";
 import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
 import { getT } from "@/lib/i18n/server";
+import { EnterScreen } from "@/components/enter-screen";
 
 const organizerTile =
   "flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl bg-card p-2 text-center text-xs font-medium ring-1 ring-foreground/10 hover:bg-muted/60";
@@ -62,7 +63,9 @@ export async function generateMetadata({
 export default async function GamePage({ params }: PageProps<"/game/[id]">) {
   const { id } = await params;
   const [ctx, t] = await Promise.all([getAppContext(), getT()]);
-  const view = UUID.test(id) && ctx.userId ? await getGameView(id) : null;
+  // Opened from a shared link on a new device: ask the name here, then show this game.
+  if (!ctx.player) return <EnterScreen />;
+  const view = UUID.test(id) ? await getGameView(id) : null;
 
   if (!view) {
     return (
@@ -71,11 +74,7 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
           <CardTitle className="text-xl">{t("game.unavailableTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Notice>
-            {ctx.group
-              ? t("game.unavailableMember")
-              : t("game.unavailableGuest")}
-          </Notice>
+          <Notice>{t("game.unavailableMember")}</Notice>
           <Link href="/" className={buttonVariants({ variant: "outline" })}>
             {t("common.home")}
           </Link>

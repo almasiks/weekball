@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SchedulePage() {
   const ctx = await getAppContext();
   if (!ctx.group) redirect("/");
-  if (ctx.role !== "organizer") redirect("/?notice=admin-only");
+  if (ctx.role !== "organizer") redirect("/admin");
 
   const supabase = await createClient();
   const t = await getT();

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Notice } from "@/components/notice";
 import { AddPlayersForm } from "@/components/roster/add-players-form";
 import { RosterList } from "@/components/roster/roster-list";
 import { getAppContext, getGroupMembers } from "@/lib/session";
@@ -12,18 +11,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Permanent roster of the group. Players don't need an account.
-export default async function RosterPage({ searchParams }: PageProps<"/roster">) {
+export default async function RosterPage() {
   const ctx = await getAppContext();
   if (!ctx.group) redirect("/");
 
-  const [{ joined }, members, t] = await Promise.all([searchParams, getGroupMembers(ctx.group.id), getT()]);
+  const [members, t] = await Promise.all([getGroupMembers(ctx.group.id), getT()]);
   const isOrganizer = ctx.role === "organizer";
   const regular = members.filter((m) => !m.archived && m.isRegular).length;
 
   return (
     <div className="flex flex-col gap-4">
-      {joined === "1" && <Notice variant="success">{t("roster.joined", { group: ctx.group.name })}</Notice>}
-
       {isOrganizer && (
         <Card>
           <CardHeader>

@@ -5,7 +5,7 @@ import { common, install, nav, offline } from "./common";
 import { colors, dates, format, positions, share, status } from "./domain";
 import { errors } from "./errors";
 import { arrival, cards, checkin, game, gameStats } from "./game";
-import { auth, home, join, start } from "./home";
+import { adminPin, enter, home, profile } from "./home";
 import { live, sounds } from "./live";
 import { match } from "./match";
 import { roster } from "./roster";
@@ -16,30 +16,30 @@ import { teams } from "./teams";
 // Every namespace in every language. Russian is the source: its shape defines the keys.
 const ALL = {
   admin,
+  adminPin,
   arrival,
-  auth,
   cards,
   checkin,
   colors,
   common,
   dates,
+  enter,
   errors,
   format,
   game,
   gameStats,
   home,
   install,
-  join,
   live,
   match,
   nav,
   offline,
   positions,
+  profile,
   roster,
   schedule,
   share,
   sounds,
-  start,
   stats,
   status,
   teams,

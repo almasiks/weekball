@@ -4,28 +4,24 @@ import { createClient } from "@/lib/supabase/server";
 import type { MemberRole, PlayerPosition } from "@/lib/supabase/database.types";
 import { getT } from "@/lib/i18n/server";
 
+// The only group of the app (seeded by the migration "single_group"). Games, schedule,
+// sounds and statistics all belong to it; the interface has no notion of groups.
+export const DEFAULT_GROUP_ID = "00000000-0000-4000-8000-000000000001";
+
 export type AppContext = {
-  // Auth account (may exist without a player yet).
+  // Auth account (anonymous; may exist without a player until a name is entered).
   userId: string | null;
-  // The roster player linked to this account (players.user_id). Compare player ids with THIS.
+  // The player linked to this account (players.user_id). Compare player ids with THIS.
   playerId: string | null;
-  isAnonymous: boolean;
   player: { id: string; name: string; position: PlayerPosition | null } | null;
-  group: { id: string; name: string; inviteCode: string } | null;
+  // Set as soon as there is a player. Always the default group.
+  group: { id: string; name: string } | null;
   role: MemberRole | null;
 };
 
-const EMPTY: AppContext = {
-  userId: null,
-  playerId: null,
-  isAnonymous: false,
-  player: null,
-  group: null,
-  role: null,
-};
+const EMPTY: AppContext = { userId: null, playerId: null, player: null, group: null, role: null };
 
-// Current account, its player and the active group (the most recently joined one).
-// Deduplicated per request via React cache().
+// Current account, its player and role. Deduplicated per request via React cache().
 export const getAppContext = cache(async (): Promise<AppContext> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -33,32 +29,26 @@ export const getAppContext = cache(async (): Promise<AppContext> => {
   if (!claims?.sub) return EMPTY;
 
   const userId = claims.sub;
-  const isAnonymous = claims.is_anonymous === true;
-
   const { data: player } = await supabase
     .from("players")
     .select("id, name, position")
     .eq("user_id", userId)
     .maybeSingle();
-  if (!player) return { ...EMPTY, userId, isAnonymous };
+  if (!player) return { ...EMPTY, userId };
 
   const { data: membership } = await supabase
     .from("group_members")
-    .select("role, groups(id, name, invite_code)")
+    .select("role")
+    .eq("group_id", DEFAULT_GROUP_ID)
     .eq("player_id", player.id)
-    .order("joined_at", { ascending: false })
-    .limit(1)
     .maybeSingle();
-
-  const group = membership?.groups;
 
   return {
     userId,
     playerId: player.id,
-    isAnonymous,
     player,
-    group: group ? { id: group.id, name: group.name, inviteCode: group.invite_code } : null,
-    role: membership?.role ?? null,
+    group: { id: DEFAULT_GROUP_ID, name: "Weekly Football" },
+    role: membership?.role ?? "player",
   };
 });
 

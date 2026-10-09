@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { ChevronRight, MapPin, MessageCircle, Shirt } from "lucide-react";
+import { ChevronRight, MapPin, MessageCircle, Shirt, Timer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Notice } from "@/components/notice";
 import { PlayerAvatar } from "@/components/player-avatar";
-import { ArrivalControls } from "@/components/game/arrival-controls";
 import { GameRealtime } from "@/components/game/game-realtime";
-import { SignupButtons } from "@/components/game/signup-buttons";
+import { SignupActions } from "@/components/game/signup-actions";
 import { formatGameDate } from "@/lib/datetime";
 import { gameShareText, whatsappUrl } from "@/lib/share";
 import type { GameView, SignupEntry } from "@/lib/games";
@@ -15,6 +14,7 @@ import { statusLabel } from "@/lib/game-status";
 import { cn } from "@/lib/utils";
 import { getT } from "@/lib/i18n/server";
 import type { T } from "@/lib/i18n";
+import { formatLabel } from "@/lib/match/format";
 
 type Props = {
   view: GameView;
@@ -87,14 +87,17 @@ export async function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
             {game.place}
           </p>
         )}
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Timer className="size-4 shrink-0" aria-hidden />
+          {formatLabel(t, game.goal_limit, game.match_minutes)}
+        </p>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between text-sm">
-            <span>
-              {t("game.signed")} <strong className="text-base">{going.length}</strong> {t("game.of")}{" "}
-              {game.max_players}
+            <span className="text-base font-semibold">
+              {t("game.signedCount", { going: going.length, max: game.max_players })}
             </span>
             {waitlist.length > 0 && (
               <span className="text-muted-foreground">
@@ -114,8 +117,14 @@ export async function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
           </div>
         </div>
 
-        {game.status === "signup" && (
-          <SignupButtons gameId={game.id} current={me?.status ?? null} />
+        {isActive && (
+          <SignupActions
+            gameId={game.id}
+            status={me?.status ?? null}
+            arrival={me?.arrival ?? "pending"}
+            lateMinutes={me?.lateMinutes ?? null}
+            canSignup={game.status === "signup"}
+          />
         )}
         {game.status === "closed" && (
           <Notice>{t("game.closedNotice")}</Notice>
@@ -152,14 +161,6 @@ export async function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
             {t("game.waitlistBefore")} <strong>{t("game.waitlistPosition", { position: queuePosition })}</strong>{" "}
             {t("game.waitlistAfter")}
           </Notice>
-        )}
-
-        {me?.status === "going" && isActive && (
-          <ArrivalControls
-            gameId={game.id}
-            arrival={me.arrival}
-            lateMinutes={me.lateMinutes}
-          />
         )}
 
         <PlayerSection title={t("game.going")} count={going.length} empty={t("game.goingEmpty")}>
@@ -252,9 +253,9 @@ export function ArrivalBadge({ t, entry }: { t: T; entry: SignupEntry }) {
   if (entry.arrival === "late") {
     return (
       <Badge variant="outline" className="shrink-0 border-amber-500/50 text-amber-700 dark:text-amber-400">
-        {t("game.lateBadge", { minutes: entry.lateMinutes ?? 0 })}
+        {t("game.statusLate", { minutes: entry.lateMinutes ?? 0 })}
       </Badge>
     );
   }
-  return null;
+  return <span className="shrink-0 text-xs text-muted-foreground">{t("game.statusGoing")}</span>;
 }

@@ -12,6 +12,7 @@ export type Member = {
   role: MemberRole;
   level: number;
   position: PlayerPosition | null;
+  hasAccount?: boolean;
 };
 
 type Props = {
@@ -23,7 +24,16 @@ type Props = {
   below?: (member: Member) => React.ReactNode;
 };
 
-export async function MemberList({ members, currentUserId, action, below }: Props) {
+export async function MemberList<M extends Member>({
+  members,
+  currentUserId,
+  action,
+  below,
+}: Omit<Props, "members" | "action" | "below"> & {
+  members: M[];
+  action?: (member: M) => React.ReactNode;
+  below?: (member: M) => React.ReactNode;
+}) {
   const t = await getT();
   if (members.length === 0) {
     return (

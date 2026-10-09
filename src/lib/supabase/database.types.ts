@@ -18,7 +18,7 @@ type GroupRow = {
   id: string;
   name: string;
   invite_code: string;
-  owner_id: string;
+  owner_id: string | null;
   created_at: string;
 };
 
@@ -377,6 +377,8 @@ export type Database = {
     };
     Views: Record<never, never>;
     Functions: {
+      enter_app: { Args: { p_name: string }; Returns: PlayerRow };
+      rename_me: { Args: { p_name: string }; Returns: PlayerRow };
       create_group: {
         Args: { group_name: string; player_name: string };
         Returns: GroupRow;

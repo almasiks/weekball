@@ -70,9 +70,33 @@ export const common = defineMessages({
 });
 
 export const nav = defineMessages({
-  ru: { label: "Основная навигация", home: "Главная", roster: "Состав", stats: "Статистика", admin: "Админ" },
-  kk: { label: "Негізгі навигация", home: "Басты", roster: "Құрам", stats: "Статистика", admin: "Админ" },
-  en: { label: "Main navigation", home: "Home", roster: "Roster", stats: "Stats", admin: "Admin" },
+  ru: {
+    label: "Основная навигация",
+    game: "Игра",
+    match: "Матч",
+    stats: "Статистика",
+    history: "История",
+    profile: "Профиль",
+    admin: "Админ",
+  },
+  kk: {
+    label: "Негізгі навигация",
+    game: "Ойын",
+    match: "Матч",
+    stats: "Статистика",
+    history: "Тарих",
+    profile: "Профиль",
+    admin: "Админ",
+  },
+  en: {
+    label: "Main navigation",
+    game: "Game",
+    match: "Match",
+    stats: "Stats",
+    history: "History",
+    profile: "Profile",
+    admin: "Admin",
+  },
 });
 
 export const offline = defineMessages({

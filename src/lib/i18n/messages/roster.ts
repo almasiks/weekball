@@ -3,10 +3,9 @@ import { defineMessages } from "../translate";
 export const roster = defineMessages({
   ru: {
     title: "Состав",
-    joined: "Вы в группе «{group}». Добро пожаловать!",
     addTitle: "Добавить игроков",
     addText:
-      "Вставьте имена списком — каждому не нужно регистрироваться. Позже человек сможет зайти по ссылке и выбрать себя.",
+      "Вставьте имена списком — каждому не нужно заходить в приложение. Позже человек откроет сайт, введёт это же имя — и вся его история сохранится.",
     levelsHint:
       "Уровень 1–5 (1 — новичок, 5 — самый сильный) помогает делить команды. Меню «⋯» — имя, позиция, объединение дублей, архив.",
     dupExists: "уже есть в составе",
@@ -47,10 +46,9 @@ export const roster = defineMessages({
   },
   kk: {
     title: "Құрам",
-    joined: "Сіз «{group}» тобындасыз. Қош келдіңіз!",
     addTitle: "Ойыншыларды қосу",
     addText:
-      "Аттарды тізіммен қойыңыз — әркімге тіркелудің қажеті жоқ. Кейін адам сілтеме арқылы кіріп, өзін таңдай алады.",
+      "Аттарды тізіммен қойыңыз — әркімге қолданбаға кірудің қажеті жоқ. Кейін адам сайтты ашып, дәл осы атты енгізеді — бүкіл тарихы сақталады.",
     levelsHint:
       "1–5 деңгейі (1 — жаңадан бастаушы, 5 — ең мықты) командаларға бөлуге көмектеседі. «⋯» мәзірі — аты, позициясы, қайталанғандарды біріктіру, мұрағат.",
     dupExists: "құрамда бар",
@@ -91,10 +89,9 @@ export const roster = defineMessages({
   },
   en: {
     title: "Roster",
-    joined: "You are in the group “{group}”. Welcome!",
     addTitle: "Add players",
     addText:
-      "Paste a list of names — nobody has to register. Later a person can open the link and pick themselves.",
+      "Paste a list of names — nobody has to open the app. Later a person opens the site, enters the same name — and keeps all their history.",
     levelsHint:
       "The level 1–5 (1 — beginner, 5 — strongest) helps to balance the teams. The “⋯” menu: name, position, merging duplicates, archive.",
     dupExists: "already in the roster",

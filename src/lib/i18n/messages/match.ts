@@ -4,7 +4,8 @@ import { defineMessages } from "../translate";
 export const match = defineMessages({
   ru: {
     title: "Матч",
-    notFound: "Матч не найден или доступен только участникам группы.",
+    notFound: "Матч не найден.",
+    noGame: "Ближайшей игры пока нет — и матча тоже.",
     statusNotStarted: "Не начался",
     statusFinished: "Матч завершён",
     statusBreak: "Перерыв",
@@ -60,7 +61,8 @@ export const match = defineMessages({
   },
   kk: {
     title: "Матч",
-    notFound: "Матч табылмады немесе тек топ мүшелеріне қолжетімді.",
+    notFound: "Матч табылмады.",
+    noGame: "Жақын арада ойын жоқ — матч та жоқ.",
     statusNotStarted: "Басталған жоқ",
     statusFinished: "Матч аяқталды",
     statusBreak: "Үзіліс",
@@ -116,7 +118,8 @@ export const match = defineMessages({
   },
   en: {
     title: "Match",
-    notFound: "The match was not found or is only visible to group members.",
+    notFound: "The match was not found.",
+    noGame: "No upcoming game yet — and no match either.",
     statusNotStarted: "Not started",
     statusFinished: "Full time",
     statusBreak: "Break",

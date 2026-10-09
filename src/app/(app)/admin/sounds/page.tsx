@@ -16,7 +16,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default async function SoundsPage({ searchParams }: PageProps<"/admin/sounds">) {
   const ctx = await getAppContext();
   if (!ctx.group) redirect("/");
-  if (ctx.role !== "organizer") redirect("/?notice=admin-only");
+  if (ctx.role !== "organizer") redirect("/admin");
 
   const [supabase, t, { from }] = await Promise.all([createClient(), getT(), searchParams]);
   // Opened from the match console ("Добавить звук"): the back link returns there.

@@ -96,16 +96,46 @@ test("organizer runs a match (incl. offline goal), stats appear after finishing"
   await organizer.goto("/stats?tab=rating");
   await expect(organizer.locator("tbody tr")).toHaveCount(2);
 
-  // Correction after the game: void the goal, recalculate -> gone from the stats.
+  // --- The organizer changes the statistics after the game.
+  const recalculated = () =>
+    organizer.waitForResponse((r) => r.url().includes("/finalize") && r.request().method() === "POST" && r.ok());
+
+  // Remove a wrong goal: gone from the stats, ratings recalculated by themselves.
   await organizer.goto(gameUrl);
   await organizer.getByRole("link", { name: "Исправить события" }).click();
+  let done = recalculated();
   await organizer.getByRole("button", { name: /^Отменить: / }).first().click();
   await organizer.getByRole("dialog").getByRole("button", { name: "Отменить" }).click();
-  await expect(organizer.getByText("Синхронизировано")).toBeVisible();
-  await organizer.goto(gameUrl);
-  await expect(organizer.getByText("Статистика и рейтинги по этой игре не обновлены.")).toBeVisible();
-  await organizer.getByRole("button", { name: "Пересчитать" }).click();
-  await expect(organizer.getByText("Статистика и рейтинги по этой игре не обновлены.")).toHaveCount(0);
+  await done;
   await organizer.goto("/stats?tab=scorers");
   await expect(organizer.getByText("Голов пока нет.")).toBeVisible();
+
+  // Add a forgotten goal with an assist at minute 3: the score, the events and the stats change.
+  await organizer.goto(`${gameUrl}/live`);
+  // Hidden until asked for: nobody adds a goal by habit after the whistle.
+  await expect(organizer.getByRole("button", { name: "⚽ Гол" })).toHaveCount(0);
+  await organizer.getByRole("button", { name: "Исправить матч" }).click();
+  await expect(organizer.getByRole("button", { name: "🔄 Замена" })).toHaveCount(0); // not a correction
+  await organizer.getByLabel("Минута матча").fill("3");
+  done = recalculated();
+  await organizer.getByRole("button", { name: "⚽ Гол" }).nth(1).click();
+  const scorerSheet = organizer.getByRole("dialog");
+  const scorer = (await scorerSheet.getByRole("button").nth(1).innerText()).trim();
+  await scorerSheet.getByRole("button").nth(1).click();
+  // The other player of that team made the pass, unless the scorer is alone in it.
+  const assistSheet = organizer.getByRole("dialog");
+  await assistSheet.getByRole("button").nth(1).click();
+  await done;
+
+  await organizer.goto(gameUrl);
+  await expect(organizer.getByText("Статистика и рейтинги по этой игре не обновлены.")).toHaveCount(0);
+  await expect(organizer.locator("li", { hasText: "⚽" }).filter({ hasText: "3'" })).toBeVisible();
+  await organizer.goto("/stats?tab=scorers");
+  await expect(organizer.locator("tbody tr")).toHaveCount(1);
+  await expect(organizer.locator("tbody tr").first()).toContainText(scorer.split("\n")[0]);
+
+  // A player has no way to do that.
+  await viewer.goto(`${gameUrl}/live`);
+  await expect(viewer.getByText("Исправить матч")).toHaveCount(0);
+  await expect(viewer.getByRole("button", { name: "⚽ Гол" })).toHaveCount(0);
 });

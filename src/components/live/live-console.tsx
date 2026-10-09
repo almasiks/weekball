@@ -8,6 +8,7 @@ import {
   Flag,
   MessageCircle,
   Pause,
+  Pencil,
   Play,
   RotateCcw,
   SkipForward,
@@ -26,7 +27,7 @@ import { MatchSetup } from "@/components/live/match-setup";
 import { signalTimeUp, useNow, useServerOffset, useWakeLock } from "@/lib/match/hooks";
 import { useOutbox } from "@/lib/match/use-outbox";
 import { saveSnapshot, type LiveSnapshot } from "@/lib/match/snapshot";
-import { applyTimerCommand, computeElapsed, type TimerCommand } from "@/lib/match/timer";
+import { applyTimerCommand, computeElapsed, correctionTime, type TimerCommand } from "@/lib/match/timer";
 import { computeScore, computeStandings } from "@/lib/match/score";
 import {
   applyGoalLimit,
@@ -48,6 +49,8 @@ import { teamColor } from "@/lib/teams/colors";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import type { MessageKey, T } from "@/lib/i18n";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const ASSIST_WINDOW_MS = 6000;
 
@@ -169,6 +172,22 @@ export function LiveConsole(props: Props) {
     matches[matches.length - 1];
   const inPlay = current && (current.status === "live" || current.status === "break");
   const gameFinished = props.gameStatus === "finished";
+  // A finished match can be corrected: events are added with a chosen minute.
+  // Opened on purpose ("Исправить матч"), per match — never shown by itself.
+  const [fixFor, setFixFor] = useState<string | null>(null);
+  const canFix = current?.status === "finished";
+  const fixing = canFix && fixFor === current?.id;
+  const matchMinutes = current ? Math.round((current.period_seconds * current.periods) / 60) : 0;
+  const [fixMinute, setFixMinute] = useState("");
+  // After corrections in a finished game the ratings are recalculated once everything is sent.
+  const needsRecalc = useRef(false);
+  useEffect(() => {
+    if (!gameFinished || !needsRecalc.current || outbox.pending.length > 0 || !outbox.online) return;
+    needsRecalc.current = false;
+    void fetch(`/api/games/${gameId}/finalize`, { method: "POST" })
+      .catch(() => null)
+      .then(() => refresh());
+  }, [gameFinished, gameId, outbox.pending.length, outbox.online, refresh]);
   const elapsed = current ? computeElapsed(current, now, offset) : null;
 
   const wakeLockSupported = useWakeLock(!!liveMatch);
@@ -251,6 +270,11 @@ export function LiveConsole(props: Props) {
   function addEvent(type: EventType, teamId: string, playerId: string, extra: Partial<EventPayload> = {}, holdMs = 0) {
     if (!current) return null;
     const e = computeElapsed(current, clock(), offset);
+    const correcting = current.status === "finished";
+    const at = correcting
+      ? correctionTime(Number(fixMinute) || matchMinutes, current)
+      : { period: current.period, second: Math.floor(e.elapsedMs / 1000) };
+    if (correcting && gameFinished) needsRecalc.current = true;
     const payload: EventPayload = {
       id: crypto.randomUUID(),
       match_id: current.id,
@@ -259,8 +283,9 @@ export function LiveConsole(props: Props) {
       player_id: playerId,
       assist_player_id: null,
       player_in_id: null,
-      period: current.period,
-      second: Math.floor(e.elapsedMs / 1000),
+      period: at.period,
+      second: at.second,
+      ...(correcting ? { correction: true } : {}),
       ...extra,
     };
     outbox.enqueue({
@@ -304,6 +329,7 @@ export function LiveConsole(props: Props) {
 
   // Undo: an unsent event is simply dropped from the queue; a sent one is voided.
   function voidEvent(event: LiveEvent) {
+    if (gameFinished) needsRecalc.current = true;
     const queued = outbox.pending.find((i) => i.id === event.id);
     if (queued) {
       outbox.remove(event.id);
@@ -510,8 +536,36 @@ export function LiveConsole(props: Props) {
               </div>
             )}
 
-            {/* Events */}
-            {inPlay && (
+            {/* Events: live recording, or corrections of a finished match */}
+            {canFix && !fixing && (
+              <Button variant="ghost" className="text-sm text-muted-foreground" onClick={() => setFixFor(current.id)}>
+                <Pencil aria-hidden />
+                {tr("live.fixTitle")}
+              </Button>
+            )}
+            {fixing && (
+              <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3">
+                <p className="text-sm font-medium">{tr("live.fixTitle")}</p>
+                <p className="text-xs text-muted-foreground">{tr("live.fixText")}</p>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="fix-minute" className="flex-1">
+                    {tr("live.fixMinute")}
+                  </Label>
+                  <Input
+                    id="fix-minute"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={matchMinutes + 30}
+                    placeholder={String(matchMinutes)}
+                    value={fixMinute}
+                    onChange={(e) => setFixMinute(e.target.value)}
+                    className="w-24 text-center"
+                  />
+                </div>
+              </div>
+            )}
+            {(inPlay || fixing) && (
               <div className="grid grid-cols-2 gap-3">
                 {[current.team_a_id, current.team_b_id].map((teamId) => {
                   const team = teamById.get(teamId);
@@ -531,13 +585,15 @@ export function LiveConsole(props: Props) {
                         {tr("live.goal")}
                       </Button>
                       <span className="truncate text-center text-xs text-muted-foreground">{team?.name}</span>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className={cn("grid gap-1.5", fixing ? "grid-cols-3" : "grid-cols-2")}>
                         <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "own_goal", teamId })}>
                           {tr("live.ownGoal")}
                         </Button>
-                        <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "sub", teamId })}>
-                          {tr("live.sub")}
-                        </Button>
+                        {!fixing && (
+                          <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "sub", teamId })}>
+                            {tr("live.sub")}
+                          </Button>
+                        )}
                         <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "yellow", teamId })}>
                           {tr("live.yellow")}
                         </Button>

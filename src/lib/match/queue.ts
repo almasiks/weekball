@@ -4,7 +4,9 @@
 import type { LiveEvent } from "./types";
 import type { TimerCommand } from "./timer";
 
-export type EventPayload = Omit<LiveEvent, "voided_at">;
+// correction: an event added to a match that is already finished (the server
+// refuses anything else for a finished match, e.g. a goal that arrives late).
+export type EventPayload = Omit<LiveEvent, "voided_at"> & { correction?: boolean };
 
 type Base = {
   id: string; // unique per item; for events it equals the event id

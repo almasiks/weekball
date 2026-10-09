@@ -56,6 +56,20 @@ export function eventMinute(period: number, second: number, periodSeconds: numbe
   return `${before + Math.floor(second / 60) + 1}'`;
 }
 
+/**
+ * Where a correction lands: the organizer types the minute of the match ("12"),
+ * the event is stored as period + second, like live events (eventMinute shows it back).
+ * Minutes after the end of the match go into added time of the last period.
+ */
+export function correctionTime(
+  minute: number,
+  match: { periods: number; period_seconds: number },
+): { period: number; second: number } {
+  const total = Math.max(0, Math.floor(minute) - 1) * 60 + 30; // the middle of that minute
+  const period = Math.min(match.periods, Math.floor(total / match.period_seconds) + 1);
+  return { period, second: total - (period - 1) * match.period_seconds };
+}
+
 export type TimerCommand =
   | { kind: "start" }
   | { kind: "pause" }

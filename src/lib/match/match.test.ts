@@ -238,3 +238,26 @@ describe("OutboxQueue", () => {
     expect(shouldRetry({ code: "P0001", message: "match_not_live" })).toBe(false);
   });
 });
+
+describe("correctionTime", () => {
+  // Imported lazily to keep the import list above untouched.
+  it("turns a typed minute into period + second that eventMinute shows back", async () => {
+    const { correctionTime, eventMinute } = await import("./timer");
+    const one = { periods: 1, period_seconds: 420 }; // 7 minutes
+    for (const minute of [1, 4, 7]) {
+      const at = correctionTime(minute, one);
+      expect(at.period).toBe(1);
+      expect(eventMinute(at.period, at.second, one.period_seconds)).toBe(`${minute}'`);
+    }
+    // After the end: added time of the last period.
+    const late = correctionTime(9, one);
+    expect(eventMinute(late.period, late.second, one.period_seconds)).toBe("7+2'");
+    // Two periods of 10 minutes: minute 14 is in the second one.
+    const two = { periods: 2, period_seconds: 600 };
+    expect(correctionTime(14, two)).toEqual({ period: 2, second: 210 });
+    expect(eventMinute(2, 210, 600)).toBe("14'");
+    // Nonsense input never produces a negative time.
+    expect(correctionTime(0, one)).toEqual({ period: 1, second: 30 });
+    expect(correctionTime(-5, one)).toEqual({ period: 1, second: 30 });
+  });
+});

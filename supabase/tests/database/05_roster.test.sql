@@ -46,7 +46,8 @@ select is(
 select is(pg_temp.pid('Бахыт') is not null, true, 'names are trimmed');
 select is((select count(*)::int from public.group_members where group_id = (select id from ctx)), 21, 'all of them are members');
 select is(
-  (select count(*)::int from public.players where user_id is null and name = 'Азамат'), 1,
+  (select count(*)::int from public.players p join public.group_members m on m.player_id = p.id
+   where m.group_id = (select id from ctx) and p.user_id is null and p.name = 'Азамат'), 1,
   'roster players have no account'
 );
 

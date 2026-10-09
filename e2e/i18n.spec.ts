@@ -1,5 +1,12 @@
-import { expect, test, type Browser } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { createGameTomorrow, createGroup, unique } from "./helpers";
+
+// The switcher in the header: a button that opens a sheet with the three languages.
+async function pickLanguage(page: Page, name: string) {
+  await page.getByRole("button", { name: /^(Язык|Тіл|Language): / }).click();
+  await page.getByRole("radio", { name }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+}
 
 const phone = async (browser: Browser, locale: string) => (await browser.newContext({ locale })).newPage();
 
@@ -26,7 +33,7 @@ test("the language switcher is remembered and the whole flow works in Kazakh and
   await expect(page.getByRole("link", { name: "Создать группу" })).toBeVisible();
 
   // Switch to Kazakh: the page changes at once and stays so after a reload.
-  await page.getByLabel("Язык").selectOption({ label: "Қазақша" });
+  await pickLanguage(page, "Қазақша");
   await expect(page.getByRole("link", { name: "Топ құру" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("link", { name: "Топ құру" })).toBeVisible();
@@ -52,7 +59,7 @@ test("the language switcher is remembered and the whole flow works in Kazakh and
   await expect(page.getByRole("button", { name: "Бір реттік ойын құру" })).toBeVisible();
 
   // The same screens in English.
-  await page.getByLabel("Тіл").selectOption({ label: "English" });
+  await pickLanguage(page, "English");
   await expect(page.getByText("Games are created automatically two weeks ahead.")).toBeVisible();
   await expect(page.getByRole("option", { name: "Saturday" })).toBeAttached();
   await page.locator("#game-date").fill(
@@ -86,7 +93,7 @@ test("the language switcher is remembered and the whole flow works in Kazakh and
 test("the language is kept by the static pages too (offline shell, 404)", async ({ browser }) => {
   const page = await phone(browser, "ru-RU");
   await page.goto("/");
-  await page.getByLabel("Язык").selectOption({ label: "English" });
+  await pickLanguage(page, "English");
   await expect(page.getByRole("link", { name: "Create a group" })).toBeVisible();
 
   await page.goto("/offline");
@@ -104,5 +111,9 @@ test("Russian stays exactly as it was for a Russian phone", async ({ browser }) 
   await page.goto("/");
   await expect(page.getByText(/^(Пн|Вт|Ср|Чт|Пт|Сб|Вс), \d{1,2} [а-я]{3}, 19:00$/)).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");
-  await expect(page.getByLabel("Язык")).toHaveValue("ru");
+  await expect(page.getByRole("button", { name: "Язык: Русский" })).toBeVisible();
+  // The current language is the checked one in the sheet.
+  await page.getByRole("button", { name: "Язык: Русский" }).click();
+  await expect(page.getByRole("radio", { name: "Русский" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Қазақша" })).not.toBeChecked();
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/client";
@@ -13,6 +14,8 @@ type Props = {
 };
 
 // Mobile-friendly action sheet: slides up from the bottom, closes on backdrop / Esc.
+// Rendered into <body>: inside the header its "fixed" position would be relative
+// to the header (backdrop-blur makes it the containing block).
 export function BottomSheet({ open, title, onClose, children }: Props) {
   const t = useT();
   const titleId = useId();
@@ -31,7 +34,7 @@ export function BottomSheet({ open, title, onClose, children }: Props) {
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <button
         type="button"
@@ -55,6 +58,7 @@ export function BottomSheet({ open, title, onClose, children }: Props) {
         </div>
         <div className="flex flex-col gap-2">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

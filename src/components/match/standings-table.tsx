@@ -1,22 +1,26 @@
+"use client";
+
 import type { StandingRow } from "@/lib/match/types";
 import { teamColor } from "@/lib/teams/colors";
+import { useT } from "@/lib/i18n/client";
 
 export function StandingsTable({ rows }: { rows: StandingRow[] }) {
+  const t = useT();
   if (rows.every((r) => r.played === 0)) {
-    return <p className="text-sm text-muted-foreground">Таблица появится после первого завершённого матча.</p>;
+    return <p className="text-sm text-muted-foreground">{t("match.standingsEmpty")}</p>;
   }
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm tabular-nums">
         <thead className="text-xs text-muted-foreground">
           <tr>
-            <th className="py-1.5 text-left font-medium">Команда</th>
-            <th className="w-7 font-medium" title="Игры">И</th>
-            <th className="w-7 font-medium" title="Победы">В</th>
-            <th className="w-7 font-medium" title="Ничьи">Н</th>
-            <th className="w-7 font-medium" title="Поражения">П</th>
-            <th className="w-12 font-medium" title="Мячи">М</th>
-            <th className="w-9 font-medium" title="Очки">О</th>
+            <th className="py-1.5 text-left font-medium">{t("match.team")}</th>
+            <th className="w-7 font-medium" title={t("gameStats.col.matches.label")}>{t("gameStats.col.matches.short")}</th>
+            <th className="w-7 font-medium" title={t("gameStats.col.wins.label")}>{t("gameStats.col.wins.short")}</th>
+            <th className="w-7 font-medium" title={t("gameStats.col.draws.label")}>{t("gameStats.col.draws.short")}</th>
+            <th className="w-7 font-medium" title={t("gameStats.col.losses.label")}>{t("gameStats.col.losses.short")}</th>
+            <th className="w-12 font-medium" title={t("match.goals")}>{t("match.goalsShort")}</th>
+            <th className="w-9 font-medium" title={t("match.points")}>{t("match.pointsShort")}</th>
           </tr>
         </thead>
         <tbody className="divide-y">

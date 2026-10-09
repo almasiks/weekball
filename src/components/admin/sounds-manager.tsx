@@ -11,8 +11,9 @@ import { Notice } from "@/components/notice";
 import { selectClassName } from "@/components/schedule/schedule-form";
 import { builtinSound, type PanelSound } from "@/components/live/sound-panel";
 import { createClient } from "@/lib/supabase/client";
-import { BUILTIN_SOUNDS, checkSoundFile, type BuiltinKey } from "@/lib/sounds/builtin";
+import { BUILTIN_SOUNDS, builtinLabel, checkSoundFile, type BuiltinKey } from "@/lib/sounds/builtin";
 import { getSoundEngine } from "@/lib/sounds/engine";
+import { useT } from "@/lib/i18n/client";
 
 type Props = { groupId: string; sounds: PanelSound[] };
 
@@ -24,6 +25,7 @@ async function fetchBytes(path: string) {
 // Organizer: own sound files (Supabase Storage "sounds/<group_id>/…").
 // Uploads go straight from the browser; Storage + table RLS allow organizers only.
 export function SoundsManager({ groupId, sounds }: Props) {
+  const t = useT();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
@@ -47,24 +49,24 @@ export function SoundsManager({ groupId, sounds }: Props) {
     const engine = getSoundEngine();
     engine.unlock();
     if (sound) await engine.preload(sound.file_path, () => fetchBytes(sound.file_path));
-    void engine.play(key ? builtinSound(key, sounds) : { key: sound!.id, filePath: sound!.file_path });
+    void engine.play(key ? builtinSound(key, sounds, t) : { key: sound!.id, filePath: sound!.file_path });
   }
 
   async function remove(sound: PanelSound): Promise<string | null> {
     const supabase = createClient();
     const { error: rowError } = await supabase.from("sounds").delete().eq("id", sound.id);
-    if (rowError) return "Не удалось удалить звук.";
+    if (rowError) return t("sounds.error.deleteFailed");
     await supabase.storage.from("sounds").remove([sound.file_path]);
     return null;
   }
 
   function upload() {
     const file = fileRef.current?.files?.[0];
-    const label = target ? BUILTIN_SOUNDS.find((b) => b.key === target)!.label : name.trim();
-    if (!file) return setError("Выберите аудиофайл.");
-    if (!label || label.length > 30) return setError("Название кнопки — от 1 до 30 символов.");
+    const label = target ? builtinLabel(t, target) : name.trim();
+    if (!file) return setError(t("sounds.error.pickFile"));
+    if (!label || label.length > 30) return setError(t("sounds.error.nameLength"));
     const checked = checkSoundFile(file);
-    if (typeof checked === "string") return setError(checked);
+    if (typeof checked === "string") return setError(t(checked));
 
     run(async () => {
       const supabase = createClient();
@@ -72,7 +74,7 @@ export function SoundsManager({ groupId, sounds }: Props) {
       const { error: uploadError } = await supabase.storage
         .from("sounds")
         .upload(path, file, { contentType: checked.contentType });
-      if (uploadError) return "Не удалось загрузить файл. Проверьте формат и размер (до 2 МБ).";
+      if (uploadError) return t("sounds.error.uploadFailed");
 
       const replaced = target ? overrides.get(target) : undefined;
       if (replaced) await remove(replaced);
@@ -86,7 +88,7 @@ export function SoundsManager({ groupId, sounds }: Props) {
       });
       if (insertError) {
         await supabase.storage.from("sounds").remove([path]);
-        return "Не удалось сохранить звук.";
+        return t("sounds.error.saveFailed");
       }
       setName("");
       setTarget("");
@@ -106,7 +108,7 @@ export function SoundsManager({ groupId, sounds }: Props) {
         supabase.from("sounds").update({ sort_order: index + delta }).eq("id", a.id),
         supabase.from("sounds").update({ sort_order: index }).eq("id", b.id),
       ]);
-      return r1.error || r2.error ? "Не удалось изменить порядок." : null;
+      return r1.error || r2.error ? t("sounds.error.orderFailed") : null;
     });
   }
 
@@ -114,12 +116,12 @@ export function SoundsManager({ groupId, sounds }: Props) {
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Загрузить звук</CardTitle>
-          <CardDescription>mp3, m4a или wav до 2 МБ. Кнопка появится на экране матча.</CardDescription>
+          <CardTitle className="text-xl">{t("sounds.uploadTitle")}</CardTitle>
+          <CardDescription>{t("sounds.uploadText")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="sound-file">Аудиофайл</Label>
+            <Label htmlFor="sound-file">{t("sounds.file")}</Label>
             <input
               id="sound-file"
               ref={fileRef}
@@ -129,28 +131,28 @@ export function SoundsManager({ groupId, sounds }: Props) {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="sound-target">Куда</Label>
+            <Label htmlFor="sound-target">{t("sounds.target")}</Label>
             <select
               id="sound-target"
               className={selectClassName}
               value={target}
               onChange={(e) => setTarget(e.target.value as "" | BuiltinKey)}
             >
-              <option value="">Новая кнопка</option>
+              <option value="">{t("sounds.newButton")}</option>
               {BUILTIN_SOUNDS.map((b) => (
                 <option key={b.key} value={b.key}>
-                  Заменить «{b.label}»
+                  {t("sounds.replace", { name: builtinLabel(t, b.key) })}
                 </option>
               ))}
             </select>
           </div>
           {!target && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="sound-name">Название кнопки</Label>
+              <Label htmlFor="sound-name">{t("sounds.buttonName")}</Label>
               <Input
                 id="sound-name"
                 maxLength={30}
-                placeholder="Например, «Гол!»"
+                placeholder={t("sounds.buttonPlaceholder")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -159,14 +161,14 @@ export function SoundsManager({ groupId, sounds }: Props) {
           {error && <Notice variant="error">{error}</Notice>}
           <Button size="lg" disabled={pending} onClick={upload}>
             <Upload aria-hidden />
-            {pending ? "Загружаю…" : "Загрузить"}
+            {pending ? t("sounds.uploading") : t("sounds.upload")}
           </Button>
         </CardContent>
       </Card>
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>Встроенные звуки</CardTitle>
+          <CardTitle>{t("sounds.builtinTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="divide-y">
@@ -175,19 +177,19 @@ export function SoundsManager({ groupId, sounds }: Props) {
               return (
                 <li key={b.key} className="flex min-h-12 items-center gap-2 py-1.5">
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="font-medium">{b.label}</span>
+                    <span className="font-medium">{builtinLabel(t, b.key)}</span>
                     <span className="text-xs text-muted-foreground">
-                      {own ? "свой файл" : b.kind === "speech" ? "голос телефона" : "синтезированный свисток"}
+                      {own ? t("sounds.ownFile") : b.kind === "speech" ? t("sounds.phoneVoice") : t("sounds.synthWhistle")}
                     </span>
                   </span>
-                  <Button variant="ghost" size="icon" aria-label={`Прослушать «${b.label}»`} onClick={() => preview(own ?? null, b.key)}>
+                  <Button variant="ghost" size="icon" aria-label={t("sounds.listen", { name: builtinLabel(t, b.key) })} onClick={() => preview(own ?? null, b.key)}>
                     <Play aria-hidden />
                   </Button>
                   {own && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label={`Вернуть встроенный «${b.label}»`}
+                      aria-label={t("sounds.restore", { name: builtinLabel(t, b.key) })}
                       disabled={pending}
                       onClick={() => run(() => remove(own))}
                     >
@@ -203,26 +205,26 @@ export function SoundsManager({ groupId, sounds }: Props) {
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>Свои кнопки</CardTitle>
+          <CardTitle>{t("sounds.customTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {custom.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Своих звуков пока нет.</p>
+            <p className="text-sm text-muted-foreground">{t("sounds.customEmpty")}</p>
           ) : (
             <ul className="divide-y">
               {custom.map((s, i) => (
                 <li key={s.id} className="flex min-h-12 items-center gap-1 py-1.5">
                   <span className="min-w-0 flex-1 truncate font-medium">{s.name}</span>
-                  <Button variant="ghost" size="icon" aria-label={`Прослушать «${s.name}»`} onClick={() => preview(s)}>
+                  <Button variant="ghost" size="icon" aria-label={t("sounds.listen", { name: s.name })} onClick={() => preview(s)}>
                     <Play aria-hidden />
                   </Button>
-                  <Button variant="ghost" size="icon" aria-label="Выше" disabled={pending || i === 0} onClick={() => move(i, -1)}>
+                  <Button variant="ghost" size="icon" aria-label={t("sounds.up")} disabled={pending || i === 0} onClick={() => move(i, -1)}>
                     <ArrowUp aria-hidden />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Ниже"
+                    aria-label={t("sounds.down")}
                     disabled={pending || i === custom.length - 1}
                     onClick={() => move(i, 1)}
                   >
@@ -232,7 +234,7 @@ export function SoundsManager({ groupId, sounds }: Props) {
                     variant="ghost"
                     size="icon"
                     className="text-destructive"
-                    aria-label={`Удалить «${s.name}»`}
+                    aria-label={t("sounds.delete", { name: s.name })}
                     disabled={pending}
                     onClick={() => run(() => remove(s))}
                   >

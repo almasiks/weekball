@@ -7,11 +7,13 @@ import { createClient } from "@/lib/supabase/client";
 import { formatGameDate } from "@/lib/datetime";
 import { clockOffset } from "@/lib/match/timer";
 import { namesFromTeams, type PublicLiveGame } from "@/lib/match/public";
+import { useT } from "@/lib/i18n/client";
 
 const POLL_MS = 5000;
 
 // Guests poll every 5 s (no Realtime); the clock ticks locally between polls.
 export function GuestLiveView({ token, initial }: { token: string; initial: PublicLiveGame }) {
+  const tr = useT();
   const [data, setData] = useState<PublicLiveGame | null>(initial);
   const [offset, setOffset] = useState(0);
   const [stale, setStale] = useState(false);
@@ -42,7 +44,7 @@ export function GuestLiveView({ token, initial }: { token: string; initial: Publ
   }, [token]);
 
   if (!data) {
-    return <Notice variant="error">Ссылка отключена организатором.</Notice>;
+    return <Notice variant="error">{tr("match.linkDisabled")}</Notice>;
   }
 
   return (
@@ -50,14 +52,14 @@ export function GuestLiveView({ token, initial }: { token: string; initial: Publ
       <header>
         <h1 className="text-2xl font-bold tracking-tight">{data.game.group_name}</h1>
         <p className="text-sm text-muted-foreground">
-          {formatGameDate(data.game.starts_at, data.game.timezone)}
+          {formatGameDate(tr, data.game.starts_at, data.game.timezone)}
           {data.game.place && ` · ${data.game.place}`}
-          {data.game.status === "finished" && " · игра завершена"}
+          {data.game.status === "finished" && tr("match.gameFinished")}
         </p>
       </header>
-      {stale && <Notice>Нет связи — показаны последние данные.</Notice>}
+      {stale && <Notice>{tr("match.stale")}</Notice>}
       {data.matches.length === 0 ? (
-        <Notice>Матч ещё не начался. Страница обновится сама.</Notice>
+        <Notice>{tr("match.notStartedYet")}</Notice>
       ) : (
         <MatchesOverview
           matches={data.matches}

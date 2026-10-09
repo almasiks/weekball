@@ -18,32 +18,27 @@ import { getGameView, getUpcomingGames } from "@/lib/games";
 import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
 import { cn } from "@/lib/utils";
+import { getT } from "@/lib/i18n/server";
 
-const AUTH_ERRORS: Record<string, string> = {
-  identity_already_exists:
-    "Этот Google-аккаунт уже привязан к другому профилю. Чтобы открыть тот профиль, войдите через Google.",
-  manual_linking_disabled:
-    "Привязка Google пока не включена. Сообщите организатору.",
-  provider_disabled: "Вход через Google пока не включён. Сообщите организатору.",
-};
+const AUTH_ERRORS = ["identity_already_exists", "manual_linking_disabled", "provider_disabled"] as const;
 
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
-  const ctx = await getAppContext();
+  const [ctx, t] = await Promise.all([getAppContext(), getT()]);
 
   const authError =
     typeof params.auth_error === "string" ? params.auth_error : null;
   const notices = (
     <>
       {params.notice === "admin-only" && (
-        <Notice variant="error">Раздел «Админ» доступен только организатору.</Notice>
+        <Notice variant="error">{t("home.adminOnly")}</Notice>
       )}
       {params.auth === "google" && (
-        <Notice variant="success">Вход через Google выполнен.</Notice>
+        <Notice variant="success">{t("auth.signedIn")}</Notice>
       )}
       {authError && (
         <Notice variant="error">
-          {AUTH_ERRORS[authError] ?? "Не удалось войти через Google. Попробуйте ещё раз."}
+          {t(AUTH_ERRORS.find((code) => code === authError) ? `auth.${authError as (typeof AUTH_ERRORS)[number]}` : "auth.failed")}
         </Notice>
       )}
     </>
@@ -54,33 +49,25 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       <div className="flex flex-col gap-6">
         {notices}
         <section className="flex flex-col gap-2 pt-4">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Еженедельный футбол без лишней суеты
-          </h1>
-          <p className="text-muted-foreground">
-            Отмечайтесь на игру, делитесь на команды за пару минут и следите за
-            счётом.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("home.heroTitle")}</h1>
+          <p className="text-muted-foreground">{t("home.heroText")}</p>
         </section>
 
         <Link href="/start" className={cn(buttonVariants({ size: "lg" }), "w-full")}>
           <Plus aria-hidden />
-          Создать группу
+          {t("home.createGroup")}
         </Link>
 
         <Card size="sm">
           <CardHeader>
-            <CardTitle>Уже играете с нами?</CardTitle>
-            <CardDescription>
-              Откройте ссылку-приглашение из чата WhatsApp. Если вы привязывали
-              Google на другом телефоне, войдите через него.
-            </CardDescription>
+            <CardTitle>{t("home.alreadyTitle")}</CardTitle>
+            <CardDescription>{t("home.alreadyText")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {ctx.userId && !ctx.isAnonymous ? (
               <form action={signOutAction}>
                 <SubmitButton variant="ghost" className="w-full">
-                  Выйти из аккаунта
+                  {t("auth.signOut")}
                 </SubmitButton>
               </form>
             ) : (
@@ -104,7 +91,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       {notices}
       <section>
         <p className="text-sm text-muted-foreground">
-          Привет, {ctx.player?.name ?? "игрок"}!
+          {t("home.hello", { name: ctx.player?.name ?? t("home.helloFallback") })}
         </p>
         <h1 className="text-2xl font-bold tracking-tight">{ctx.group.name}</h1>
       </section>
@@ -120,18 +107,18 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
             <CalendarClock className="size-10 text-primary" aria-hidden />
-            <p className="font-medium">Ближайшей игры пока нет</p>
+            <p className="font-medium">{t("home.noGameTitle")}</p>
             <p className="text-sm text-muted-foreground">
               {ctx.role === "organizer"
-                ? "Настройте расписание или создайте разовую игру."
-                : "Как только организатор назначит игру, она появится здесь."}
+                ? t("home.noGameOrganizer")
+                : t("home.noGamePlayer")}
             </p>
             {ctx.role === "organizer" && (
               <Link
                 href="/admin/schedule"
                 className={cn(buttonVariants({ variant: "outline" }), "mt-2")}
               >
-                Расписание и игры
+                {t("home.scheduleLink")}
               </Link>
             )}
           </CardContent>
@@ -141,7 +128,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       {laterGames.length > 0 && (
         <Card size="sm">
           <CardHeader>
-            <CardTitle>Следующие игры</CardTitle>
+            <CardTitle>{t("home.laterGames")}</CardTitle>
           </CardHeader>
           <CardContent>
             <UpcomingGamesList games={laterGames} />
@@ -151,7 +138,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>Ваш профиль</CardTitle>
+          <CardTitle>{t("home.profile")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {ctx.isAnonymous ? (
@@ -159,18 +146,15 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               <GoogleLinkButton />
               {authError === "identity_already_exists" && (
                 <>
-                  <p className="text-xs text-muted-foreground">
-                    Вход в другой профиль заменит текущий профиль на этом
-                    устройстве.
-                  </p>
-                  <GoogleSignInButton label="Войти в профиль Google" />
+                  <p className="text-xs text-muted-foreground">{t("home.otherProfileHint")}</p>
+                  <GoogleSignInButton label={t("auth.signInOther")} />
                 </>
               )}
             </>
           ) : (
             <form action={signOutAction}>
               <SubmitButton variant="ghost" className="w-full">
-                Выйти из аккаунта
+                {t("auth.signOut")}
               </SubmitButton>
             </form>
           )}

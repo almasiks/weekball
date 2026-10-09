@@ -10,14 +10,17 @@ import { getMatchData } from "@/lib/match/load";
 import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Матч" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("match.title") };
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function MatchPage({ params }: PageProps<"/match/[id]">) {
   const { id } = await params;
-  const ctx = await getAppContext();
+  const [ctx, t] = await Promise.all([getAppContext(), getT()]);
 
   let gameId: string | null = null;
   if (UUID.test(id) && ctx.userId) {
@@ -32,9 +35,9 @@ export default async function MatchPage({ params }: PageProps<"/match/[id]">) {
   if (!view || !data || !match) {
     return (
       <div className="flex flex-col gap-4">
-        <Notice>Матч не найден или доступен только участникам группы.</Notice>
+        <Notice>{t("match.notFound")}</Notice>
         <Link href="/" className={buttonVariants({ variant: "outline" })}>
-          На главную
+          {t("common.home")}
         </Link>
       </div>
     );
@@ -48,7 +51,7 @@ export default async function MatchPage({ params }: PageProps<"/match/[id]">) {
         className="-ml-2 flex min-h-11 w-fit items-center gap-1 px-2 text-sm text-muted-foreground"
       >
         <ChevronLeft className="size-4" aria-hidden />
-        К игре
+        {t("game.toGame")}
       </Link>
       <MatchDetail
         match={match}

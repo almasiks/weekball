@@ -49,6 +49,7 @@ import { strengthGapPercent, suggestTeamCount } from "@/lib/teams/balance";
 import { playerStrength } from "@/lib/teams/strength";
 import type { GameView, TeamView } from "@/lib/games";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 const UNASSIGNED = "unassigned";
 
@@ -61,6 +62,7 @@ type Move = { playerId: string; teamId: string | null };
 
 export function TeamsBoard({ view, shareUrl }: Props) {
   const { game, teams, going } = view;
+  const tr = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [menuPlayerId, setMenuPlayerId] = useState<string | null>(null);
@@ -148,12 +150,12 @@ export function TeamsBoard({ view, shareUrl }: Props) {
       {/* Team count */}
       <section className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
-          <h2 className="font-medium">Число команд</h2>
+          <h2 className="font-medium">{tr("teams.teamCount")}</h2>
           <span className="text-sm text-muted-foreground">
-            идут: {going.length}
+            {tr("teams.goingCount", { count: going.length })}
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Число команд">
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label={tr("teams.teamCount")}>
           {([2, 3] as const).map((count) => (
             <Button
               key={count}
@@ -162,22 +164,23 @@ export function TeamsBoard({ view, shareUrl }: Props) {
               disabled={pending}
               onClick={() => run(() => setTeamCountAction(game.id, count))}
             >
-              {count} команды
+              {tr("game.teamsCount", { count })}
             </Button>
           ))}
         </div>
         {going.length > 0 && (
           <p className="text-xs text-muted-foreground">
             {suggestion.options
-              .map((o) => `${o.teams} по ${formatSizes(o.sizes)}`)
-              .join(" или ")}
-            {" · "}советуем {suggestion.recommended}
+              .map((o) => tr("teams.sizeOption", { teams: o.teams, sizes: formatSizes(o.sizes) }))
+              .join(tr("teams.or"))}
+            {" · "}
+            {tr("teams.suggest", { count: suggestion.recommended })}
           </p>
         )}
       </section>
 
       {teams.length === 0 ? (
-        <Notice>Выберите число команд — мы создадим их с цветами и названиями.</Notice>
+        <Notice>{tr("teams.pickCount")}</Notice>
       ) : (
         <>
           {/* Actions */}
@@ -191,7 +194,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
               }
             >
               {assignedCount > captainIds.size ? <Shuffle aria-hidden /> : <Sparkles aria-hidden />}
-              {assignedCount > captainIds.size ? "Пересобрать" : "Собрать автоматически"}
+              {assignedCount > captainIds.size ? tr("teams.rebuild") : tr("teams.autoBuild")}
             </Button>
             <Button
               variant="outline"
@@ -199,7 +202,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
               onClick={() => run(() => startDraftAction(game.id))}
             >
               <Swords aria-hidden />
-              Драфт
+              {tr("teams.draft")}
             </Button>
             <Button
               variant={published ? "secondary" : "outline"}
@@ -207,13 +210,13 @@ export function TeamsBoard({ view, shareUrl }: Props) {
               onClick={() => run(() => setPublishedAction(game.id, !published))}
             >
               {published ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
-              {published ? "Скрыть" : "Опубликовать"}
+              {published ? tr("teams.hide") : tr("teams.publish")}
             </Button>
           </section>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <span className={published ? "font-medium text-primary" : "text-muted-foreground"}>
-              {published ? "Составы опубликованы" : "Игроки пока не видят составы"}
+              {published ? tr("teams.published") : tr("teams.notPublished")}
             </span>
             {gap !== null && assignedCount > 0 && (
               <span
@@ -222,18 +225,18 @@ export function TeamsBoard({ view, shareUrl }: Props) {
                   gap <= 10 ? "text-primary" : "text-amber-700 dark:text-amber-400",
                 )}
               >
-                Разница сил: {gap}%
+                {tr("teams.gap", { gap })}
               </span>
             )}
           </div>
 
           {error && <Notice variant="error">{error}</Notice>}
 
-          <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Кого распределять">
+          <div className="grid grid-cols-2 gap-1.5" role="group" aria-label={tr("teams.poolLabel")}>
             {(
               [
-                ["present", `Только пришедшие · ${presentCount}`],
-                ["all", `Все записавшиеся · ${going.length}`],
+                ["present", tr("teams.presentOnly", { count: presentCount })],
+                ["all", tr("teams.allSigned", { count: going.length })],
               ] as const
             ).map(([mode, label]) => (
               <button
@@ -257,13 +260,13 @@ export function TeamsBoard({ view, shareUrl }: Props) {
             <DropZone id={UNASSIGNED} className="rounded-xl border border-dashed p-2">
               <h3 className="flex items-center gap-1.5 px-1 pb-1 text-sm font-medium">
                 <Users className="size-4" aria-hidden />
-                Не распределены · {unassigned.length}
+                {tr("teams.unassignedCount", { count: unassigned.length })}
               </h3>
               {unassigned.length === 0 ? (
                 <p className="px-1 py-2 text-sm text-muted-foreground">
                   {presentOnly && allUnassigned.length > 0
-                    ? `Все пришедшие в командах. Не отмечены: ${allUnassigned.length}.`
-                    : "Все игроки в командах."}
+                    ? tr("teams.allPresentIn", { count: allUnassigned.length })
+                    : tr("teams.allIn")}
                 </p>
               ) : (
                 <ul className="flex flex-col gap-1">
@@ -280,7 +283,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
                             onClick={() => run(() => addLatePlayerAction(game.id, p.playerId))}
                           >
                             <UserPlus aria-hidden />
-                            Докинуть
+                            {tr("teams.addLate")}
                           </Button>
                         }
                       />
@@ -298,6 +301,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
                 className="overflow-hidden rounded-xl ring-1 ring-foreground/10"
               >
                 <TeamHeader
+                  t={tr}
                   name={t.team.name}
                   color={t.color}
                   count={players.length}
@@ -308,7 +312,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
                       variant="ghost"
                       size="icon"
                       className="text-inherit hover:bg-black/10"
-                      aria-label={`Изменить команду ${t.team.name}`}
+                      aria-label={tr("teams.editTeam", { name: t.team.name })}
                       onClick={() => setEditingTeamId(editingTeamId === t.team.id ? null : t.team.id)}
                     >
                       <Pencil aria-hidden />
@@ -327,7 +331,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
                 <ul className="flex min-h-14 flex-col gap-1 p-2">
                   {players.length === 0 && (
                     <li className="px-1 py-2 text-sm text-muted-foreground">
-                      Перетащите сюда игроков
+                      {tr("teams.dropHere")}
                     </li>
                   )}
                   {players.map((p) => (
@@ -356,11 +360,12 @@ export function TeamsBoard({ view, shareUrl }: Props) {
               className={cn(buttonVariants({ size: "lg" }), "h-14 w-full text-base")}
             >
               <Timer aria-hidden />
-              {game.status === "live" ? "Вести матч" : "Начать матч"}
+              {game.status === "live" ? tr("game.runMatch") : tr("teams.startMatch")}
             </Link>
           )}
 
           <ShareTeamsButton
+            t={tr}
             startsAt={game.starts_at}
             timezone={game.timezone}
             url={shareUrl}
@@ -375,7 +380,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
 
       <BottomSheet
         open={!!menuPlayer}
-        title={menuPlayer ? `${menuPlayer.name}: переместить в…` : ""}
+        title={menuPlayer ? tr("teams.moveTitle", { name: menuPlayer.name }) : ""}
         onClose={() => setMenuPlayerId(null)}
       >
         {menuPlayer && (
@@ -394,7 +399,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
                   style={{ backgroundColor: t.color.hex }}
                 />
                 {t.team.name}
-                {menuTeamId === t.team.id && " (сейчас здесь)"}
+                {menuTeamId === t.team.id && tr("teams.hereNow")}
               </Button>
             ))}
             <Button
@@ -404,7 +409,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
               onClick={() => move(menuPlayer.playerId, null)}
             >
               <Users aria-hidden />
-              Не распределены
+              {tr("teams.unassigned")}
             </Button>
             {menuTeamId ? (
               <Button
@@ -418,7 +423,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
                 }}
               >
                 {menuPlayer.isLocked ? <LockOpen aria-hidden /> : <Lock aria-hidden />}
-                {menuPlayer.isLocked ? "Открепить" : "Закрепить (не двигать при пересборке)"}
+                {menuPlayer.isLocked ? tr("teams.unlock") : tr("teams.lock")}
               </Button>
             ) : (
               <Button
@@ -432,7 +437,7 @@ export function TeamsBoard({ view, shareUrl }: Props) {
                 }}
               >
                 <UserPlus aria-hidden />
-                Докинуть в самую малочисленную
+                {tr("teams.addToSmallest")}
               </Button>
             )}
           </>

@@ -9,14 +9,17 @@ import { formatGameDate } from "@/lib/datetime";
 import { getGameView } from "@/lib/games";
 import { getAppContext, getGroupMembers } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Кто пришёл" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("checkin.title") };
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function CheckinPage({ params }: PageProps<"/game/[id]/checkin">) {
   const { id } = await params;
-  const ctx = await getAppContext();
+  const [ctx, t] = await Promise.all([getAppContext(), getT()]);
   const view = UUID.test(id) && ctx.userId ? await getGameView(id) : null;
   if (!view) redirect(`/game/${id}`);
   const isOrganizer = ctx.role === "organizer" && ctx.group?.id === view.game.group_id;
@@ -42,13 +45,13 @@ export default async function CheckinPage({ params }: PageProps<"/game/[id]/chec
         className="-ml-2 flex min-h-11 w-fit items-center gap-1 px-2 text-sm text-muted-foreground"
       >
         <ChevronLeft className="size-4" aria-hidden />
-        К игре
+        {t("game.toGame")}
       </Link>
       <header>
-        <h1 className="text-2xl font-bold tracking-tight">Кто пришёл</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("checkin.title")}</h1>
         <p className="text-sm text-muted-foreground">
           {view.game.title ? `${view.game.title} · ` : ""}
-          {formatGameDate(view.game.starts_at, view.game.timezone)}
+          {formatGameDate(t, view.game.starts_at, view.game.timezone)}
         </p>
       </header>
 
@@ -57,11 +60,11 @@ export default async function CheckinPage({ params }: PageProps<"/game/[id]/chec
           <CheckinBoard gameId={view.game.id} players={players} />
           <Link href={`/game/${id}/teams`} className={cn(buttonVariants({ size: "lg" }), "h-14 w-full text-base")}>
             <Users aria-hidden />
-            К командам
+            {t("checkin.toTeams")}
           </Link>
         </>
       ) : (
-        <Notice>Игра завершена или отменена — отметка закрыта.</Notice>
+        <Notice>{t("checkin.closed")}</Notice>
       )}
     </div>
   );

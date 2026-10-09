@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/notice";
 import { SubmitButton } from "@/components/submit-button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 type Props = {
   code: string;
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export function JoinGroupForm({ code, defaultName, claimable }: Props) {
+  const t = useT();
   const [state, formAction] = useActionState<FormState, FormData>(joinGroupAction, {});
   const [mode, setMode] = useState<"pick" | "new">(claimable.length ? "pick" : "new");
   const [picked, setPicked] = useState<string | null>(null);
@@ -36,15 +38,15 @@ export function JoinGroupForm({ code, defaultName, claimable }: Props) {
             <div className="relative">
               <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
               <Input
-                aria-label="Поиск по имени"
-                placeholder="Поиск по имени"
+                aria-label={t("common.searchByName")}
+                placeholder={t("common.searchByName")}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="pl-9"
               />
             </div>
           )}
-          <ul className="grid max-h-[50dvh] grid-cols-2 gap-2 overflow-y-auto" aria-label="Выберите себя">
+          <ul className="grid max-h-[50dvh] grid-cols-2 gap-2 overflow-y-auto" aria-label={t("join.pickLabel")}>
             {visible.map((p) => (
               <li key={p.id}>
                 <button
@@ -63,21 +65,21 @@ export function JoinGroupForm({ code, defaultName, claimable }: Props) {
             ))}
           </ul>
           {state.error && <Notice variant="error">{state.error}</Notice>}
-          <SubmitButton size="lg" disabled={!picked} pendingText="Входим…">
-            Это я
+          <SubmitButton size="lg" disabled={!picked} pendingText={t("join.signingIn")}>
+            {t("join.itsMe")}
           </SubmitButton>
           <Button type="button" variant="ghost" onClick={() => setMode("new")}>
-            Меня нет в списке
+            {t("join.notInList")}
           </Button>
         </>
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="playerName">Ваше имя</Label>
+            <Label htmlFor="playerName">{t("start.yourName")}</Label>
             <Input
               id="playerName"
               name="playerName"
-              placeholder="Как вас называть в составе"
+              placeholder={t("start.yourNamePlaceholder")}
               defaultValue={defaultName}
               maxLength={40}
               required
@@ -86,12 +88,12 @@ export function JoinGroupForm({ code, defaultName, claimable }: Props) {
             />
           </div>
           {state.error && <Notice variant="error">{state.error}</Notice>}
-          <SubmitButton size="lg" pendingText="Вступаем…">
-            Вступить в группу
+          <SubmitButton size="lg" pendingText={t("join.joining")}>
+            {t("join.submit")}
           </SubmitButton>
           {claimable.length > 0 && (
             <Button type="button" variant="ghost" onClick={() => setMode("pick")}>
-              Найти себя в списке
+              {t("join.findMe")}
             </Button>
           )}
         </>

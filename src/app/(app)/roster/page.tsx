@@ -5,30 +5,30 @@ import { Notice } from "@/components/notice";
 import { AddPlayersForm } from "@/components/roster/add-players-form";
 import { RosterList } from "@/components/roster/roster-list";
 import { getAppContext, getGroupMembers } from "@/lib/session";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Состав" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("roster.title") };
+}
 
 // Permanent roster of the group. Players don't need an account.
 export default async function RosterPage({ searchParams }: PageProps<"/roster">) {
   const ctx = await getAppContext();
   if (!ctx.group) redirect("/");
 
-  const [{ joined }, members] = await Promise.all([searchParams, getGroupMembers(ctx.group.id)]);
+  const [{ joined }, members, t] = await Promise.all([searchParams, getGroupMembers(ctx.group.id), getT()]);
   const isOrganizer = ctx.role === "organizer";
   const regular = members.filter((m) => !m.archived && m.isRegular).length;
 
   return (
     <div className="flex flex-col gap-4">
-      {joined === "1" && <Notice variant="success">Вы в группе «{ctx.group.name}». Добро пожаловать!</Notice>}
+      {joined === "1" && <Notice variant="success">{t("roster.joined", { group: ctx.group.name })}</Notice>}
 
       {isOrganizer && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Добавить игроков</CardTitle>
-            <CardDescription>
-              Вставьте имена списком — каждому не нужно регистрироваться. Позже человек сможет зайти по
-              ссылке и выбрать себя.
-            </CardDescription>
+            <CardTitle className="text-xl">{t("roster.addTitle")}</CardTitle>
+            <CardDescription>{t("roster.addText")}</CardDescription>
           </CardHeader>
           <CardContent>
             <AddPlayersForm groupId={ctx.group.id} existingNames={members.map((m) => m.name)} />
@@ -39,13 +39,10 @@ export default async function RosterPage({ searchParams }: PageProps<"/roster">)
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">
-            Состав <span className="text-muted-foreground">· {regular}</span>
+            {t("roster.title")} <span className="text-muted-foreground">· {regular}</span>
           </CardTitle>
           {isOrganizer && (
-            <CardDescription>
-              Уровень 1–5 (1 — новичок, 5 — самый сильный) помогает делить команды. Меню «⋯» — имя,
-              позиция, объединение дублей, архив.
-            </CardDescription>
+            <CardDescription>{t("roster.levelsHint")}</CardDescription>
           )}
         </CardHeader>
         <CardContent>

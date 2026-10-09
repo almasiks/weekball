@@ -1,4 +1,5 @@
 // Match format: "up to N goals" and/or "N minutes", whichever comes first.
+import type { MessageKey, T } from "@/lib/i18n";
 import { computeScore } from "./score";
 import type { LiveEvent, LiveMatch } from "./types";
 
@@ -6,15 +7,14 @@ export const DEFAULT_GOAL_LIMIT = 2;
 export const DEFAULT_MATCH_MINUTES = 7;
 
 /** "до 2 голов · 7 мин", "до 1 гола · 5 мин", "без лимита голов · 10 мин". */
-export function formatLabel(goalLimit: number | null | undefined, minutes: number): string {
-  const goals =
-    goalLimit == null ? "без лимита голов" : `до ${goalLimit} ${goalLimit === 1 ? "гола" : "голов"}`;
-  return `${goals} · ${minutes} мин`;
+export function formatLabel(t: T, goalLimit: number | null | undefined, minutes: number): string {
+  const goals = goalLimit == null ? t("format.noLimit") : t("format.goals", { count: goalLimit });
+  return t("format.label", { goals, minutes });
 }
 
-export function matchFormatLabel(match: Pick<LiveMatch, "goal_limit" | "period_seconds" | "periods">): string {
+export function matchFormatLabel(t: T, match: Pick<LiveMatch, "goal_limit" | "period_seconds" | "periods">): string {
   const minutes = Math.round((match.period_seconds * match.periods) / 60);
-  return formatLabel(match.goal_limit, minutes);
+  return formatLabel(t, match.goal_limit, minutes);
 }
 
 type Event = Pick<LiveEvent, "id" | "match_id" | "type" | "team_id" | "second" | "voided_at">;
@@ -77,9 +77,6 @@ export function timeUpAt(match: LiveMatch): number | null {
   return Date.parse(match.timer_started_at) + (match.period_seconds * 1000 - Number(match.timer_elapsed_ms));
 }
 
-export function finishReasonLabel(reason: LiveMatch["finish_reason"]): string | null {
-  if (reason === "goal_limit") return "по лимиту голов";
-  if (reason === "time") return "время вышло";
-  if (reason === "manual") return "завершён вручную";
-  return null;
+export function finishReasonLabel(t: T, reason: LiveMatch["finish_reason"]): string | null {
+  return reason ? t(`format.reason.${reason}` as MessageKey) : null;
 }

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { bestPlayersText, gameSummaryText, rankBestPlayers, teamsShareText, whatsappUrl } from "./share";
+import { translator } from "@/lib/i18n";
 
 const startsAt = "2026-10-03T14:00:00Z"; // Сб 19:00 in Almaty
 const timezone = "Asia/Almaty";
 const url = "https://example.com/game/1";
+const ru = translator("ru");
 
 const row = (name: string, goals: number, assists: number, wins: number, own_goals = 0) => ({
   name,
@@ -34,7 +36,7 @@ describe("rankBestPlayers", () => {
 
 describe("share texts", () => {
   it("best players: MVP line and numbered list", () => {
-    const text = bestPlayersText({
+    const text = bestPlayersText(ru, {
       startsAt,
       timezone,
       mvp: "Иван",
@@ -49,7 +51,7 @@ describe("share texts", () => {
   });
 
   it("evening summary includes MVP and top scorer when known", () => {
-    const text = gameSummaryText({
+    const text = gameSummaryText(ru, {
       startsAt,
       timezone,
       teams: [
@@ -68,7 +70,7 @@ describe("share texts", () => {
   });
 
   it("teams text lists everyone, wa.me link is encoded", () => {
-    const text = teamsShareText({
+    const text = teamsShareText(ru, {
       startsAt,
       timezone,
       url,

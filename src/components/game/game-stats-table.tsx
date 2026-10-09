@@ -8,6 +8,8 @@ import { BottomSheet } from "@/components/bottom-sheet";
 import { teamColor } from "@/lib/teams/colors";
 import type { GamePlayerStatRow } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 export type StatKey =
   | "matches"
@@ -20,16 +22,17 @@ export type StatKey =
   | "yellows"
   | "reds";
 
-export const STAT_COLUMNS: { key: StatKey; short: string; label: string }[] = [
-  { key: "matches", short: "И", label: "Игры" },
-  { key: "wins", short: "В", label: "Победы" },
-  { key: "draws", short: "Н", label: "Ничьи" },
-  { key: "losses", short: "П", label: "Поражения" },
-  { key: "goals", short: "Г", label: "Голы" },
-  { key: "assists", short: "А", label: "Ассисты" },
-  { key: "own_goals", short: "АГ", label: "Автоголы" },
-  { key: "yellows", short: "ЖК", label: "Жёлтые" },
-  { key: "reds", short: "КК", label: "Красные" },
+// Names: gameStats.col.<key>.label / .short
+export const STAT_COLUMNS: { key: StatKey }[] = [
+  { key: "matches" },
+  { key: "wins" },
+  { key: "draws" },
+  { key: "losses" },
+  { key: "goals" },
+  { key: "assists" },
+  { key: "own_goals" },
+  { key: "yellows" },
+  { key: "reds" },
 ];
 
 const STORAGE_KEY = "weekball:game-stats-columns";
@@ -65,6 +68,9 @@ type SortKey = StatKey | "name";
 
 // Per-game player table. Live: the page re-renders on every event (GameRealtime).
 export function GameStatsTable({ rows, mvpId }: { rows: GamePlayerStatRow[]; mvpId: string | null }) {
+  const t = useT();
+  const colLabel = (key: StatKey) => t(`gameStats.col.${key}.label` as MessageKey);
+  const colShort = (key: StatKey) => t(`gameStats.col.${key}.short` as MessageKey);
   const [prefs, setPrefs] = useState<ColumnPrefs>(DEFAULT_PREFS);
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: "goals", desc: true });
   const [configuring, setConfiguring] = useState(false);
@@ -123,16 +129,16 @@ export function GameStatsTable({ rows, mvpId }: { rows: GamePlayerStatRow[]; mvp
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <h2 className="flex-1 text-lg font-semibold">Статистика игры</h2>
+        <h2 className="flex-1 text-lg font-semibold">{t("gameStats.title")}</h2>
         <Button variant="ghost" onClick={() => setConfiguring(true)}>
           <Settings2 aria-hidden />
-          Настроить
+          {t("gameStats.configure")}
         </Button>
       </div>
 
       {rows.length === 0 ? (
         <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
-          Таблица появится, когда игроки будут распределены по командам.
+          {t("gameStats.empty")}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
@@ -145,22 +151,22 @@ export function GameStatsTable({ rows, mvpId }: { rows: GamePlayerStatRow[]; mvp
                     onClick={() => toggleSort("name")}
                     className="flex min-h-11 items-center gap-1 px-3 font-medium"
                   >
-                    Игрок {sortIcon("name")}
+                    {t("gameStats.player")} {sortIcon("name")}
                   </button>
                 </th>
                 {columns.map((c) => (
                   <th key={c.key} scope="col" aria-sort={ariaSort(c.key)} className="text-center">
                     <button
                       type="button"
-                      title={c.label}
-                      aria-label={c.label}
+                      title={colLabel(c.key)}
+                      aria-label={colLabel(c.key)}
                       onClick={() => toggleSort(c.key)}
                       className={cn(
                         "flex min-h-11 w-full min-w-9 items-center justify-center gap-0.5 px-1.5 font-medium",
                         sort.key === c.key && "text-foreground",
                       )}
                     >
-                      {c.short} {sortIcon(c.key)}
+                      {colShort(c.key)} {sortIcon(c.key)}
                     </button>
                   </th>
                 ))}
@@ -178,7 +184,7 @@ export function GameStatsTable({ rows, mvpId }: { rows: GamePlayerStatRow[]; mvp
                       />
                       <span className="truncate">{r.name}</span>
                       {r.player_id === mvpId && (
-                        <Star className="size-3.5 shrink-0 fill-amber-400 text-amber-500" aria-label="Игрок вечера" />
+                        <Star className="size-3.5 shrink-0 fill-amber-400 text-amber-500" aria-label={t("gameStats.mvp")} />
                       )}
                     </Link>
                   </th>
@@ -202,11 +208,11 @@ export function GameStatsTable({ rows, mvpId }: { rows: GamePlayerStatRow[]; mvp
       )}
       {rows.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          {columns.map((c) => `${c.short} — ${c.label.toLowerCase()}`).join(", ")}
+          {columns.map((c) => `${colShort(c.key)} — ${colLabel(c.key).toLowerCase()}`).join(", ")}
         </p>
       )}
 
-      <BottomSheet open={configuring} title="Колонки таблицы" onClose={() => setConfiguring(false)}>
+      <BottomSheet open={configuring} title={t("gameStats.columns")} onClose={() => setConfiguring(false)}>
         <ul className="flex flex-col gap-1">
           {prefs.order.map((key, i) => {
             const col = STAT_COLUMNS.find((c) => c.key === key)!;
@@ -220,12 +226,12 @@ export function GameStatsTable({ rows, mvpId }: { rows: GamePlayerStatRow[]; mvp
                     onChange={() => toggleHidden(key)}
                     className="size-5 accent-primary"
                   />
-                  {col.label}
+                  {colLabel(col.key)}
                 </label>
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`${col.label}: выше`}
+                  aria-label={t("gameStats.up", { column: colLabel(col.key) })}
                   disabled={i === 0}
                   onClick={() => move(key, -1)}
                 >
@@ -234,7 +240,7 @@ export function GameStatsTable({ rows, mvpId }: { rows: GamePlayerStatRow[]; mvp
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`${col.label}: ниже`}
+                  aria-label={t("gameStats.down", { column: colLabel(col.key) })}
                   disabled={i === prefs.order.length - 1}
                   onClick={() => move(key, 1)}
                 >
@@ -245,7 +251,7 @@ export function GameStatsTable({ rows, mvpId }: { rows: GamePlayerStatRow[]; mvp
           })}
         </ul>
         <Button variant="outline" onClick={() => update(DEFAULT_PREFS)}>
-          Сбросить настройки
+          {t("gameStats.reset")}
         </Button>
       </BottomSheet>
     </section>

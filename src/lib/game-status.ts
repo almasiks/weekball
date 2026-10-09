@@ -1,10 +1,6 @@
+import type { MessageKey, T } from "@/lib/i18n";
 import type { GameStatus } from "@/lib/supabase/database.types";
 
-export const STATUS_LABEL: Record<GameStatus, string> = {
-  signup: "Запись открыта",
-  closed: "Запись закрыта",
-  teams: "Делим команды",
-  live: "Идёт игра",
-  finished: "Игра завершена",
-  cancelled: "Игра отменена",
-};
+export function statusLabel(t: T, status: GameStatus): string {
+  return t(`status.${status}` as MessageKey);
+}

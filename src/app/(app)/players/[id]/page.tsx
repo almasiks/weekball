@@ -15,8 +15,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { LeaderboardRow, PlayerPosition } from "@/lib/supabase/database.types";
 import { teamColor } from "@/lib/teams/colors";
 import { cn } from "@/lib/utils";
+import { getT } from "@/lib/i18n/server";
+import type { MessageKey } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Игрок" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("stats.playerTitle") };
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -48,9 +52,9 @@ type Profile = {
 };
 
 const RESULT = {
-  W: { label: "В", className: "bg-emerald-600 text-white" },
-  D: { label: "Н", className: "bg-neutral-400 text-neutral-950" },
-  L: { label: "П", className: "bg-red-600 text-white" },
+  W: { className: "bg-emerald-600 text-white" },
+  D: { className: "bg-neutral-400 text-neutral-950" },
+  L: { className: "bg-red-600 text-white" },
 };
 
 function Stat({ label, value }: { label: string; value: string | number }) {
@@ -64,7 +68,7 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 export default async function PlayerPage({ params }: PageProps<"/players/[id]">) {
   const { id } = await params;
-  const ctx = await getAppContext();
+  const [ctx, tr] = await Promise.all([getAppContext(), getT()]);
   if (!ctx.group) redirect("/");
 
   let profile: Profile | null = null;
@@ -77,9 +81,9 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
   if (!profile?.player) {
     return (
       <div className="flex flex-col gap-4">
-        <Notice>Игрок не найден в вашей группе.</Notice>
+        <Notice>{tr("stats.playerNotFound")}</Notice>
         <Link href="/stats" className={buttonVariants({ variant: "outline" })}>
-          К статистике
+          {tr("stats.toStats")}
         </Link>
       </div>
     );
@@ -94,7 +98,7 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
         className="-ml-2 flex min-h-11 w-fit items-center gap-1 px-2 text-sm text-muted-foreground"
       >
         <ChevronLeft className="size-4" aria-hidden />
-        Статистика
+        {tr("stats.title")}
       </Link>
 
       <header className="flex items-center gap-3">
@@ -102,21 +106,21 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-bold tracking-tight">
             {player.name}
-            {player.id === ctx.playerId && <span className="text-base font-normal text-muted-foreground"> (вы)</span>}
+            {player.id === ctx.playerId && <span className="text-base font-normal text-muted-foreground"> {tr("common.you")}</span>}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {positionLabel(player.position)} · уровень {player.level}
+            {tr("stats.positionLevel", { position: positionLabel(tr, player.position), level: player.level })}
           </p>
         </div>
         <div className="flex flex-col items-end">
           <span className="text-2xl font-bold tabular-nums">{player.rating}</span>
-          <span className="text-xs text-muted-foreground">рейтинг</span>
+          <span className="text-xs text-muted-foreground">{tr("stats.rating")}</span>
         </div>
       </header>
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>Рейтинг по играм</CardTitle>
+          <CardTitle>{tr("stats.ratingByGames")}</CardTitle>
         </CardHeader>
         <CardContent>
           <RatingChart history={rating_history} />
@@ -127,23 +131,23 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
         <Card size="sm">
           <CardHeader>
             <CardTitle className="flex items-center justify-between gap-2">
-              Итоги
+              {tr("game.results")}
               <FormDots form={t.form} />
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-3 gap-2">
-            <Stat label="матчей" value={t.matches} />
-            <Stat label="В / Н / П" value={`${t.wins}/${t.draws}/${t.losses}`} />
-            <Stat label="% побед" value={`${t.win_pct}%`} />
-            <Stat label="голов" value={t.goals} />
-            <Stat label="передач" value={t.assists} />
-            <Stat label="голов за матч" value={Number(t.goals_per_match).toFixed(2)} />
-            <Stat label="посещаемость" value={`${t.attendance_pct}%`} />
-            <Stat label="игр сыграно" value={`${t.games_played}/${t.finished_games}`} />
-            <Stat label="карточки" value={`${t.yellows}🟨 ${t.reds}🟥`} />
+            <Stat label={tr("stats.statMatches")} value={t.matches} />
+            <Stat label={tr("stats.statWdl")} value={`${t.wins}/${t.draws}/${t.losses}`} />
+            <Stat label={tr("stats.statWinPct")} value={`${t.win_pct}%`} />
+            <Stat label={tr("stats.statGoals")} value={t.goals} />
+            <Stat label={tr("stats.statAssists")} value={t.assists} />
+            <Stat label={tr("stats.statGoalsPerMatch")} value={Number(t.goals_per_match).toFixed(2)} />
+            <Stat label={tr("stats.statAttendance")} value={`${t.attendance_pct}%`} />
+            <Stat label={tr("stats.statGamesPlayed")} value={`${t.games_played}/${t.finished_games}`} />
+            <Stat label={tr("stats.statCards")} value={`${t.yellows}🟨 ${t.reds}🟥`} />
             {t.no_shows > 0 && (
               <p className="col-span-3 text-xs text-muted-foreground">
-                Записывался, но не пришёл: {t.no_shows}
+                {tr("stats.noShows", { count: t.no_shows })}
               </p>
             )}
           </CardContent>
@@ -152,11 +156,11 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>Последние матчи</CardTitle>
+          <CardTitle>{tr("stats.recentMatches")}</CardTitle>
         </CardHeader>
         <CardContent>
           {recent_matches.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Сыгранных матчей пока нет.</p>
+            <p className="text-sm text-muted-foreground">{tr("stats.noMatches")}</p>
           ) : (
             <ul className="divide-y">
               {recent_matches.map((m) => (
@@ -167,9 +171,9 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
                         "flex size-6 shrink-0 items-center justify-center rounded text-xs font-bold",
                         RESULT[m.result].className,
                       )}
-                      aria-label={{ W: "победа", D: "ничья", L: "поражение" }[m.result]}
+                      aria-label={tr(`stats.result.${m.result}.title` as MessageKey)}
                     >
-                      {RESULT[m.result].label}
+                      {tr(`stats.result.${m.result}.label` as MessageKey)}
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-sm font-medium">
@@ -180,9 +184,9 @@ export default async function PlayerPage({ params }: PageProps<"/players/[id]">)
                         {m.opponent_name} <Dot color={m.opponent_color} />
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {formatGameDate(m.starts_at, DEFAULT_TIMEZONE)}
+                        {formatGameDate(tr, m.starts_at, DEFAULT_TIMEZONE)}
                         {m.goals > 0 && ` · ⚽ ${m.goals}`}
-                        {m.assists > 0 && ` · пас ${m.assists}`}
+                        {m.assists > 0 && tr("stats.assistsShort", { count: m.assists })}
                       </span>
                     </span>
                   </Link>

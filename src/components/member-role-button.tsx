@@ -5,10 +5,12 @@ import { setMemberRoleAction } from "@/lib/actions/groups";
 import type { FormState } from "@/lib/forms";
 import type { MemberRole } from "@/lib/supabase/database.types";
 import { SubmitButton } from "@/components/submit-button";
+import { useT } from "@/lib/i18n/client";
 
 type Props = { playerId: string; currentRole: MemberRole; disabled?: boolean };
 
 export function MemberRoleButton({ playerId, currentRole, disabled }: Props) {
+  const t = useT();
   const [state, formAction] = useActionState<FormState, FormData>(
     setMemberRoleAction,
     {},
@@ -25,7 +27,7 @@ export function MemberRoleButton({ playerId, currentRole, disabled }: Props) {
         className="text-sm"
         disabled={disabled}
       >
-        {nextRole === "organizer" ? "Сделать организатором" : "Снять права"}
+        {nextRole === "organizer" ? t("admin.makeOrganizer") : t("admin.removeOrganizer")}
       </SubmitButton>
       {state.error && (
         <p className="max-w-48 text-right text-xs text-destructive">

@@ -1,5 +1,11 @@
-// Built-in sound buttons. Voice phrases use speechSynthesis (ru-RU), whistles
-// are synthesized with Web Audio. A group can replace any of them with a file.
+// Built-in sound buttons. Voice phrases use speechSynthesis, whistles are
+// synthesized with Web Audio. A group can replace any of them with a file.
+// Button names and spoken phrases are translated (builtinLabel / builtinSpeech);
+// `label` and `text` below are the Russian originals, used when the phone has
+// no voice for the interface language.
+import { LOCALE_TAGS } from "@/lib/i18n/config";
+import type { MessageKey, T } from "@/lib/i18n";
+
 export type BuiltinKey = "minute" | "out" | "whistle" | "final";
 
 export type BuiltinSound = {
@@ -28,11 +34,24 @@ export const MAX_SOUND_BYTES = 2 * 1024 * 1024;
 
 const TYPES: Record<string, string> = { mp3: "audio/mpeg", m4a: "audio/mp4", wav: "audio/wav" };
 
-/** Allowed upload: mp3 / m4a / wav up to 2 MB. Returns the content type or an error. */
-export function checkSoundFile(file: { name: string; size: number }): { contentType: string; ext: string } | string {
+/** Name of a built-in button in the interface language. */
+export function builtinLabel(t: T, key: BuiltinKey): string {
+  return t(`sounds.builtin.${key}` as MessageKey);
+}
+
+/** What the phone says for a voice button, and in which language. */
+export function builtinSpeech(t: T, key: BuiltinKey): { text: string; lang: string } | undefined {
+  if (key !== "minute" && key !== "out") return undefined;
+  return { text: t(`sounds.speech.${key}` as MessageKey), lang: LOCALE_TAGS[t.locale] };
+}
+
+/** Allowed upload: mp3 / m4a / wav up to 2 MB. Returns the content type or the key of an error message. */
+export function checkSoundFile(
+  file: { name: string; size: number },
+): { contentType: string; ext: string } | MessageKey {
   const ext = file.name.toLowerCase().split(".").pop() ?? "";
-  if (!TYPES[ext]) return "Поддерживаются mp3, m4a и wav.";
-  if (file.size > MAX_SOUND_BYTES) return "Файл больше 2 МБ.";
-  if (file.size === 0) return "Файл пустой.";
+  if (!TYPES[ext]) return "sounds.error.type";
+  if (file.size > MAX_SOUND_BYTES) return "sounds.error.size";
+  if (file.size === 0) return "sounds.error.empty";
   return { contentType: TYPES[ext], ext };
 }

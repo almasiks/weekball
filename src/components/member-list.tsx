@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { positionLabel } from "@/lib/positions";
 import type { MemberRole, PlayerPosition } from "@/lib/supabase/database.types";
+import { getT } from "@/lib/i18n/server";
 
 export type Member = {
   playerId: string;
@@ -22,12 +23,11 @@ type Props = {
   below?: (member: Member) => React.ReactNode;
 };
 
-export function MemberList({ members, currentUserId, action, below }: Props) {
+export async function MemberList({ members, currentUserId, action, below }: Props) {
+  const t = await getT();
   if (members.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        Пока никого нет. Отправьте ссылку-приглашение в чат.
-      </p>
+      <p className="py-6 text-center text-sm text-muted-foreground">{t("admin.membersEmpty")}</p>
     );
   }
 
@@ -41,19 +41,19 @@ export function MemberList({ members, currentUserId, action, below }: Props) {
               <Link href={`/players/${member.playerId}`} className="truncate font-medium underline-offset-2 hover:underline">
                 {member.name}
                 {member.playerId === currentUserId && (
-                  <span className="text-muted-foreground"> (вы)</span>
+                  <span className="text-muted-foreground"> {t("common.you")}</span>
                 )}
               </Link>
               <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                 {member.role === "organizer" ? (
                   <Badge variant="secondary" className="w-fit gap-1">
                     <Crown className="size-3" aria-hidden />
-                    Организатор
+                    {t("common.organizer")}
                   </Badge>
                 ) : (
-                  <span>Игрок</span>
+                  <span>{t("common.player")}</span>
                 )}
-                {member.position && <span>{positionLabel(member.position)}</span>}
+                {member.position && <span>{positionLabel(t, member.position)}</span>}
               </span>
             </div>
             {action?.(member)}

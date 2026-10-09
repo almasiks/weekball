@@ -9,11 +9,13 @@ import { TeamHeader } from "@/components/teams/team-header";
 import { draftPickAction, endDraftAction } from "@/lib/actions/teams";
 import { draftTeamIndex } from "@/lib/teams/draft";
 import type { GameView } from "@/lib/games";
+import { useT } from "@/lib/i18n/client";
 
 type Props = { view: GameView; userId: string | null; isOrganizer: boolean };
 
 export function DraftPanel({ view, userId, isOrganizer }: Props) {
   const { game, teams, unassigned } = view;
+  const tr = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -47,16 +49,16 @@ export function DraftPanel({ view, userId, isOrganizer }: Props) {
           className="flex flex-col gap-1 rounded-xl p-4"
           style={{ backgroundColor: `${current.color.hex}22` }}
         >
-          <span className="text-sm text-muted-foreground">Ход {game.draft_turn + 1}</span>
+          <span className="text-sm text-muted-foreground">{tr("teams.turn", { turn: game.draft_turn + 1 })}</span>
           <span className="text-lg font-semibold">
-            {current.color.emoji} Выбирают «{current.team.name}»
+            {current.color.emoji} {tr("teams.picking", { team: current.team.name })}
           </span>
           <span className="text-sm">
             {isMyTurn
-              ? "Ваш ход — выберите игрока ниже."
+              ? tr("teams.yourTurn")
               : captain
-                ? `Капитан: ${captain.name}`
-                : "Капитана нет — выбирает организатор."}
+                ? tr("teams.captainIs", { name: captain.name })
+                : tr("teams.noCaptainOrganizer")}
           </span>
         </section>
       )}
@@ -65,10 +67,10 @@ export function DraftPanel({ view, userId, isOrganizer }: Props) {
 
       <section className="flex flex-col gap-1">
         <h2 className="text-sm font-medium text-muted-foreground">
-          Ещё не выбраны · {unassigned.length}
+          {tr("teams.notPicked", { count: unassigned.length })}
         </h2>
         {unassigned.length === 0 ? (
-          <p className="py-2 text-sm text-muted-foreground">Все выбраны.</p>
+          <p className="py-2 text-sm text-muted-foreground">{tr("teams.allPicked")}</p>
         ) : (
           <ul className="flex flex-col gap-1">
             {unassigned.map((p) => (
@@ -78,7 +80,7 @@ export function DraftPanel({ view, userId, isOrganizer }: Props) {
                   trailing={
                     canPick && (
                       <Button className="shrink-0" disabled={pending} onClick={() => pick(p.playerId)}>
-                        Выбрать
+                        {tr("teams.pick")}
                       </Button>
                     )
                   }
@@ -93,6 +95,7 @@ export function DraftPanel({ view, userId, isOrganizer }: Props) {
         {teams.map((t) => (
           <section key={t.team.id} className="overflow-hidden rounded-xl ring-1 ring-foreground/10">
             <TeamHeader
+              t={tr}
               name={t.team.name}
               color={t.color}
               count={t.players.length}
@@ -105,7 +108,7 @@ export function DraftPanel({ view, userId, isOrganizer }: Props) {
             />
             <ul className="flex flex-col gap-1 p-2">
               {t.players.length === 0 ? (
-                <li className="px-1 py-2 text-sm text-muted-foreground">Пока никого</li>
+                <li className="px-1 py-2 text-sm text-muted-foreground">{tr("teams.nobody")}</li>
               ) : (
                 t.players.map((p) => (
                   <li key={p.playerId}>
@@ -121,7 +124,7 @@ export function DraftPanel({ view, userId, isOrganizer }: Props) {
       {isOrganizer && (
         <Button variant="outline" disabled={pending} onClick={end}>
           <Flag aria-hidden />
-          Завершить драфт
+          {tr("teams.endDraft")}
         </Button>
       )}
     </div>

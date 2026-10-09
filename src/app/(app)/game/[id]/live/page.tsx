@@ -11,14 +11,17 @@ import { getMatchData } from "@/lib/match/load";
 import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Матч" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("match.title") };
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function LivePage({ params }: PageProps<"/game/[id]/live">) {
   const { id } = await params;
-  const ctx = await getAppContext();
+  const [ctx, t] = await Promise.all([getAppContext(), getT()]);
   const view = UUID.test(id) && ctx.userId ? await getGameView(id) : null;
   if (!view) redirect(`/game/${id}`);
   const isOrganizer = ctx.role === "organizer" && ctx.group?.id === view.game.group_id;
@@ -44,18 +47,18 @@ export default async function LivePage({ params }: PageProps<"/game/[id]/live">)
         className="-ml-2 flex min-h-11 w-fit items-center gap-1 px-2 text-sm text-muted-foreground"
       >
         <ChevronLeft className="size-4" aria-hidden />
-        К игре
+        {t("game.toGame")}
       </Link>
       <header>
-        <h1 className="text-2xl font-bold tracking-tight">Матч</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("match.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {formatGameDate(view.game.starts_at, view.game.timezone)}
+          {formatGameDate(t, view.game.starts_at, view.game.timezone)}
           {view.game.place && ` · ${view.game.place}`}
         </p>
       </header>
 
       {cancelled ? (
-        <Notice variant="error">Игра отменена.</Notice>
+        <Notice variant="error">{t("match.gameCancelled")}</Notice>
       ) : (
         <LiveConsole
           gameId={view.game.id}

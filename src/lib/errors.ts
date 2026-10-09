@@ -1,62 +1,22 @@
-// Postgres exception codes raised by our RPCs -> user-facing Russian messages.
-const ERROR_MESSAGES: Record<string, string> = {
-  invalid_group_name: "Название группы должно быть от 1 до 60 символов.",
-  invalid_player_name: "Имя должно быть от 1 до 40 символов.",
-  invalid_invite_code:
-    "Ссылка-приглашение недействительна. Попросите организатора прислать новую.",
-  not_authenticated: "Не удалось войти. Обновите страницу и попробуйте ещё раз.",
-  last_organizer: "В группе должен остаться хотя бы один организатор.",
-  game_not_found: "Игра не найдена или доступна только участникам группы.",
-  signup_closed: "Запись на эту игру закрыта.",
-  game_not_active: "Игра отменена или уже завершена.",
-  not_going: "Отмечать прибытие могут только записавшиеся в основной состав.",
-  invalid_late_minutes: "Укажите, на сколько минут опаздываете.",
-  not_organizer: "Это действие доступно только организатору.",
-  invalid_status_transition: "Такое изменение статуса игры недоступно.",
-  too_many_teams: "Можно создать не больше 3 команд.",
-  invalid_team_name: "Название команды — от 1 до 30 символов.",
-  invalid_color: "Выберите цвет из палитры.",
-  color_taken: "Этот цвет уже занят другой командой.",
-  team_not_found: "Команда не найдена — обновите страницу.",
-  player_not_going: "Игрок больше не записан на игру.",
-  invalid_assignments: "Не удалось применить расклад. Попробуйте ещё раз.",
-  already_in_team: "Игрок уже в команде.",
-  no_teams: "Сначала создайте команды.",
-  player_not_in_team: "Игрок не в команде.",
-  need_two_teams: "Для драфта нужно минимум 2 команды.",
-  nobody_to_draft: "Все игроки уже распределены — выбирать некого.",
-  draft_not_active: "Драфт не идёт.",
-  not_your_turn: "Сейчас не ваш ход.",
-  player_not_available: "Этого игрока уже выбрали.",
-  invalid_level: "Уровень — от 1 до 5.",
-  team_has_matches: "Эта команда уже играла — удалить её нельзя.",
-  match_not_found: "Матч не найден — обновите страницу.",
-  invalid_match_teams: "Выберите две разные команды этой игры.",
-  invalid_match_settings: "Таймов 1–4, длительность тайма от 1 до 60 минут.",
-  match_already_started: "Матч уже начался — настройки менять нельзя.",
-  another_match_live: "Сначала завершите текущий матч.",
-  last_period: "Это последний тайм — завершите матч.",
-  match_not_started: "Матч ещё не начался.",
-  match_not_live: "Матч не идёт — событие не записано.",
-  invalid_event: "Некорректное событие.",
-  invalid_event_team: "Команда не участвует в этом матче.",
-  invalid_assist: "Ассистент должен быть из той же команды и не автором гола.",
-  invalid_sub: "Замена: выберите уходящего и выходящего игроков одной команды.",
-  invalid_event_time: "Некорректная минута события.",
-  event_not_found: "Событие не найдено.",
-  no_finished_matches: "Сначала завершите хотя бы один матч.",
-  match_in_progress: "Сначала завершите идущий матч.",
-};
+import type { MessageKey, T } from "@/lib/i18n";
 
-export const DEFAULT_ERROR = "Что-то пошло не так. Попробуйте ещё раз.";
-
-export function errorMessage(key: keyof typeof ERROR_MESSAGES | string): string {
-  return ERROR_MESSAGES[key] ?? DEFAULT_ERROR;
+// Postgres exception codes raised by our RPCs -> user-facing messages.
+// The texts live in i18n/messages/errors.ts, keyed by the code.
+function known(t: T, code: string): string | null {
+  if (code === "default") return null;
+  const key = `errors.${code}`;
+  const text = t(key as MessageKey);
+  return text === key ? null : text;
 }
 
-export function toMessage(error: { message?: string } | null | undefined): string {
-  const key = Object.keys(ERROR_MESSAGES).find((k) =>
-    error?.message?.includes(k),
-  );
-  return key ? ERROR_MESSAGES[key] : DEFAULT_ERROR;
+export function errorMessage(t: T, code: string): string {
+  return known(t, code) ?? t("errors.default");
+}
+
+export function toMessage(t: T, error: { message?: string } | null | undefined): string {
+  for (const word of error?.message?.match(/[a-z_]+/g) ?? []) {
+    const text = known(t, word);
+    if (text) return text;
+  }
+  return t("errors.default");
 }

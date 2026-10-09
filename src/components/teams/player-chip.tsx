@@ -1,8 +1,11 @@
+"use client";
+
 import { Clock, GripVertical, Lock, Timer } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { positionShort } from "@/lib/positions";
 import type { SignupEntry } from "@/lib/games";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 export type ChipPlayer = SignupEntry & { isLocked?: boolean; addedLate?: boolean };
 
@@ -18,18 +21,19 @@ type Props = {
 };
 
 export function ArrivalMark({ player }: { player: SignupEntry }) {
+  const t = useT();
   if (player.arrival === "arrived") {
-    return <span className="text-xs font-medium text-primary">на месте</span>;
+    return <span className="text-xs font-medium text-primary">{t("game.arrived")}</span>;
   }
   if (player.arrival === "late") {
     return (
       <span className="inline-flex items-center gap-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
         <Clock className="size-3" aria-hidden />
-        {player.lateMinutes} мин
+        {t("teams.lateMinutes", { minutes: player.lateMinutes ?? 0 })}
       </span>
     );
   }
-  return <span className="text-xs text-muted-foreground">не отметился</span>;
+  return <span className="text-xs text-muted-foreground">{t("teams.notMarked")}</span>;
 }
 
 export function PlayerChip({
@@ -41,7 +45,8 @@ export function PlayerChip({
   trailing,
   className,
 }: Props) {
-  const pos = positionShort(player.position);
+  const t = useT();
+  const pos = positionShort(t, player.position);
   const body = (
     <>
       <PlayerAvatar name={player.name} avatarUrl={player.avatarUrl} className="size-8 text-sm" />
@@ -49,16 +54,16 @@ export function PlayerChip({
         <span className="flex items-center gap-1 truncate font-medium">
           <span className="truncate">{player.name}</span>
           {isCaptain && (
-            <span className="shrink-0 rounded bg-foreground/10 px-1 text-[10px] font-semibold" title="Капитан">
-              К
+            <span className="shrink-0 rounded bg-foreground/10 px-1 text-[10px] font-semibold" title={t("teams.captain")}>
+              {t("teams.captainLetter")}
             </span>
           )}
-          {player.isLocked && <Lock className="size-3.5 shrink-0 text-muted-foreground" aria-label="закреплён" />}
-          {player.addedLate && <Timer className="size-3.5 shrink-0 text-amber-600" aria-label="докинут" />}
+          {player.isLocked && <Lock className="size-3.5 shrink-0 text-muted-foreground" aria-label={t("teams.locked")} />}
+          {player.addedLate && <Timer className="size-3.5 shrink-0 text-amber-600" aria-label={t("teams.addedLate")} />}
         </span>
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
           {pos && <span>{pos}</span>}
-          <span aria-label={`уровень ${player.level}`}>ур. {player.level}</span>
+          <span aria-label={t("teams.level", { level: player.level })}>{t("roster.levelShort", { level: player.level })}</span>
           {showArrival && <ArrivalMark player={player} />}
         </span>
       </span>
@@ -70,7 +75,7 @@ export function PlayerChip({
       {handle && (
         <button
           type="button"
-          aria-label={`Перетащить ${player.name}`}
+          aria-label={t("teams.drag", { name: player.name })}
           className="flex h-11 w-8 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground active:cursor-grabbing"
           {...handle}
         >

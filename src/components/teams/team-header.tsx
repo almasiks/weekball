@@ -1,7 +1,10 @@
+import type { T } from "@/lib/i18n";
 import type { TeamColor } from "@/lib/teams/colors";
 import { cn } from "@/lib/utils";
 
 type Props = {
+  // Rendered both on the server and inside client screens: the caller passes its translator.
+  t: T;
   name: string;
   color: TeamColor;
   count: number;
@@ -12,7 +15,7 @@ type Props = {
 };
 
 // Coloured bib header. The colour is always paired with the team name (accessibility).
-export function TeamHeader({ name, color, count, strength, captainName, trailing, highlight }: Props) {
+export function TeamHeader({ t, name, color, count, strength, captainName, trailing, highlight }: Props) {
   return (
     <div
       className={cn(
@@ -26,9 +29,9 @@ export function TeamHeader({ name, color, count, strength, captainName, trailing
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate font-semibold">{name}</span>
         <span className="truncate text-xs opacity-85">
-          {count} игр.
-          {strength !== undefined && ` · сила ${strength}`}
-          {captainName && ` · капитан ${captainName}`}
+          {t("teams.headerPlayers", { count })}
+          {strength !== undefined && t("teams.headerStrength", { strength })}
+          {captainName && t("teams.headerCaptain", { name: captainName })}
         </span>
       </div>
       {trailing}

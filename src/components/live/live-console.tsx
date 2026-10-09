@@ -46,6 +46,8 @@ import { finishGameAction, reopenMatchAction } from "@/lib/actions/matches";
 import { matchResultText, whatsappUrl } from "@/lib/share";
 import { teamColor } from "@/lib/teams/colors";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey, T } from "@/lib/i18n";
 
 const ASSIST_WINDOW_MS = 6000;
 
@@ -74,16 +76,17 @@ type Picker =
   | { step: "void"; event: LiveEvent }
   | null;
 
-const EVENT_TITLE: Record<EventType, string> = {
-  goal: "Кто забил?",
-  own_goal: "Кто забил в свои ворота?",
-  yellow: "Жёлтая карточка",
-  red: "Красная карточка",
-  sub: "Кто уходит?",
+const EVENT_TITLE: Record<EventType, MessageKey> = {
+  goal: "live.whoScored",
+  own_goal: "live.whoOwnGoal",
+  yellow: "live.yellowCard",
+  red: "live.redCard",
+  sub: "live.whoOff",
 };
 
 export function LiveConsole(props: Props) {
   const { gameId, teams, names, siteUrl } = props;
+  const tr = useT();
   const router = useRouter();
   const measuredOffset = useServerOffset();
   const offset = measuredOffset ?? props.initialOffset ?? 0;
@@ -210,18 +213,18 @@ export function LiveConsole(props: Props) {
     if (!autoSounds || !liveMatch || minuteAnnounced.current.has(liveMatch.id)) return;
     if (!minuteWarningDue(liveMatch, now + offset)) return;
     minuteAnnounced.current.add(liveMatch.id);
-    void getSoundEngine().play(builtinSound("minute", sounds));
-  }, [autoSounds, liveMatch, now, offset, sounds]);
+    void getSoundEngine().play(builtinSound("minute", sounds, tr));
+  }, [autoSounds, liveMatch, now, offset, sounds, tr]);
 
   const lastStatus = useRef(new Map<string, LiveMatch["status"]>());
   useEffect(() => {
     for (const m of matches) {
       if (autoSounds && endedByItself(lastStatus.current.get(m.id), m)) {
-        void getSoundEngine().play(builtinSound("final", sounds));
+        void getSoundEngine().play(builtinSound("final", sounds, tr));
       }
       lastStatus.current.set(m.id, m.status);
     }
-  }, [autoSounds, matches, sounds]);
+  }, [autoSounds, matches, sounds, tr]);
 
   // The assist sheet closes by itself when its window ends (the goal is sent without an assist).
   const assistOpen = picker?.step === "assist" && now <= picker.until;
@@ -360,12 +363,12 @@ export function LiveConsole(props: Props) {
         <Notice key={item.id} variant="error">
           <div className="flex items-start gap-2">
             <span className="flex-1">
-              Не принято сервером: {describeItem(item, names)} — {item.error}
+              {tr("live.rejected", { item: describeItem(tr, item, names), error: item.error ?? "" })}
             </span>
             <button
               type="button"
               className="-m-2 flex size-11 shrink-0 items-center justify-center"
-              aria-label="Скрыть"
+              aria-label={tr("live.hide")}
               onClick={() => outbox.remove(item.id)}
             >
               <X className="size-4" aria-hidden />
@@ -377,7 +380,7 @@ export function LiveConsole(props: Props) {
       {!wakeLockSupported && anyLive && (
         <Notice>
           <Sun className="mr-1 inline size-4" aria-hidden />
-          Браузер не умеет держать экран включённым — отключите автоблокировку на время матча.
+          {tr("live.wakeLock")}
         </Notice>
       )}
 
@@ -387,7 +390,7 @@ export function LiveConsole(props: Props) {
         matches={matches}
         currentId={current?.id ?? null}
         onSelect={setSelectedId}
-        formatText={formatLabel(props.meta.goalLimit, props.meta.matchMinutes ?? DEFAULT_MATCH_MINUTES)}
+        formatText={formatLabel(tr, props.meta.goalLimit, props.meta.matchMinutes ?? DEFAULT_MATCH_MINUTES)}
         disabled={gameFinished}
       />
 
@@ -401,7 +404,7 @@ export function LiveConsole(props: Props) {
               scoreB={current.score_b}
               offset={offset}
               big
-              note={matchFormatLabel(current)}
+              note={matchFormatLabel(tr, current)}
             />
 
             <SoundPanel sounds={props.sounds} />
@@ -417,19 +420,19 @@ export function LiveConsole(props: Props) {
                     onClick={() => timer({ kind: "start" })}
                   >
                     <Play aria-hidden />
-                    Старт
+                    {tr("live.start")}
                   </Button>
                 )}
                 {current.status === "live" && current.timer_status === "running" && (
                   <Button size="lg" variant="secondary" className="h-16 text-base" onClick={() => timer({ kind: "pause" })}>
                     <Pause aria-hidden />
-                    Пауза
+                    {tr("live.pause")}
                   </Button>
                 )}
                 {current.status === "live" && current.timer_status === "paused" && (
                   <Button size="lg" className="h-16 text-base" onClick={() => timer({ kind: "resume" })}>
                     <Play aria-hidden />
-                    Продолжить
+                    {tr("live.resume")}
                   </Button>
                 )}
                 {(current.status === "live" || current.status === "break") && (
@@ -440,7 +443,7 @@ export function LiveConsole(props: Props) {
                     onClick={() => setConfirmFinish("match")}
                   >
                     <Flag aria-hidden />
-                    Завершить матч
+                    {tr("live.finishMatch")}
                   </Button>
                 )}
                 {current.status === "live" && current.period < current.periods && (
@@ -450,7 +453,7 @@ export function LiveConsole(props: Props) {
                     onClick={() => timer({ kind: "break", period: current.period })}
                   >
                     <SkipForward aria-hidden />
-                    Перерыв
+                    {tr("live.break")}
                   </Button>
                 )}
                 {current.status === "break" && (
@@ -460,20 +463,20 @@ export function LiveConsole(props: Props) {
                     onClick={() => timer({ kind: "next_period", period: current.period + 1 })}
                   >
                     <Play aria-hidden />
-                    Начать {current.period + 1}-й тайм
+                    {tr("live.startPeriod", { period: current.period + 1 })}
                   </Button>
                 )}
                 {current.status === "finished" && (
                   <div className="col-span-2 flex flex-col gap-2">
                     <p className="rounded-lg bg-muted/60 px-3 py-2 text-center text-sm font-medium" role="status">
-                      Матч завершён
-                      {finishReasonLabel(current.finish_reason) && ` · ${finishReasonLabel(current.finish_reason)}`}
-                      {current.score_a === current.score_b && " · ничья"}
+                      {tr("match.statusFinished")}
+                      {finishReasonLabel(tr, current.finish_reason) && ` · ${finishReasonLabel(tr, current.finish_reason)}`}
+                      {current.score_a === current.score_b && tr("live.draw")}
                     </p>
                     {current.finish_reason === "goal_limit" && winningGoal && (
                       <Button size="lg" variant="secondary" onClick={() => voidEvent(winningGoal)}>
                         <Undo2 aria-hidden />
-                        Отменить последний гол
+                        {tr("live.undoGoal")}
                       </Button>
                     )}
                     {!anyLive && (
@@ -492,7 +495,7 @@ export function LiveConsole(props: Props) {
                         onClick={() => runAction(() => reopenMatchAction(gameId, current.id))}
                       >
                         <RotateCcw aria-hidden />
-                        Вернуть матч (отменить завершение)
+                        {tr("live.reopen")}
                       </Button>
                     )}
                   </div>
@@ -518,21 +521,21 @@ export function LiveConsole(props: Props) {
                         style={{ backgroundColor: color.hex }}
                         onClick={() => setPicker({ step: "player", type: "goal", teamId })}
                       >
-                        ⚽ Гол
+                        {tr("live.goal")}
                       </Button>
                       <span className="truncate text-center text-xs text-muted-foreground">{team?.name}</span>
                       <div className="grid grid-cols-2 gap-1.5">
                         <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "own_goal", teamId })}>
-                          Автогол
+                          {tr("live.ownGoal")}
                         </Button>
                         <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "sub", teamId })}>
-                          🔄 Замена
+                          {tr("live.sub")}
                         </Button>
                         <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "yellow", teamId })}>
-                          🟨 Жёлтая
+                          {tr("live.yellow")}
                         </Button>
                         <Button variant="outline" className="gap-1 px-0.5 text-[13px]" onClick={() => setPicker({ step: "player", type: "red", teamId })}>
-                          🟥 Красная
+                          {tr("live.red")}
                         </Button>
                       </div>
                     </div>
@@ -544,21 +547,21 @@ export function LiveConsole(props: Props) {
             {inPlay && lastEvent && (
               <Button variant="secondary" onClick={() => voidEvent(lastEvent)}>
                 <Undo2 aria-hidden />
-                Отменить последнее событие
+                {tr("live.undoLast")}
               </Button>
             )}
 
             {current.status === "finished" && (
               <a
                 href={whatsappUrl(
-                  matchResultText({ match: current, teams, events, names, url: `${siteUrl}/match/${current.id}` }),
+                  matchResultText(tr, { match: current, teams, events, names, url: `${siteUrl}/match/${current.id}` }),
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(buttonVariants(), "w-full bg-[#075E54] text-white hover:bg-[#064c44]")}
               >
                 <MessageCircle aria-hidden />
-                Поделиться результатом
+                {tr("match.shareResult")}
               </a>
             )}
           </CardContent>
@@ -570,7 +573,7 @@ export function LiveConsole(props: Props) {
       {current && currentEvents.length > 0 && (
         <Card size="sm">
           <CardHeader>
-            <CardTitle>События матча</CardTitle>
+            <CardTitle>{tr("live.matchEvents")}</CardTitle>
           </CardHeader>
           <CardContent>
             <EventFeed
@@ -589,7 +592,7 @@ export function LiveConsole(props: Props) {
       {anyFinished && (
         <Card size="sm">
           <CardHeader>
-            <CardTitle>Таблица вечера</CardTitle>
+            <CardTitle>{tr("match.eveningTable")}</CardTitle>
           </CardHeader>
           <CardContent>
             <StandingsTable rows={standings} />
@@ -600,7 +603,7 @@ export function LiveConsole(props: Props) {
       {!gameFinished && anyFinished && !anyLive && (
         <Button size="lg" variant="outline" onClick={() => setConfirmFinish("game")}>
           <CircleCheck aria-hidden />
-          Завершить игру
+          {tr("live.finishGame")}
         </Button>
       )}
 
@@ -610,14 +613,14 @@ export function LiveConsole(props: Props) {
         open={picker?.step === "player" || picker?.step === "sub_in"}
         title={
           picker?.step === "player"
-            ? `${EVENT_TITLE[picker.type]} · ${teamById.get(picker.teamId)?.name ?? ""}`
-            : "Кто выходит?"
+            ? `${tr(EVENT_TITLE[picker.type])} · ${teamById.get(picker.teamId)?.name ?? ""}`
+            : tr("live.whoOn")
         }
         onClose={() => setPicker(null)}
       >
         {picker?.step === "player" && picker.type === "own_goal" && (
           <p className="text-sm text-muted-foreground">
-            Гол засчитается команде соперника.
+            {tr("live.ownGoalHint")}
           </p>
         )}
         {(picker?.step === "player" || picker?.step === "sub_in") &&
@@ -647,13 +650,13 @@ export function LiveConsole(props: Props) {
           ))}
         {(picker?.step === "player" || picker?.step === "sub_in") &&
           (teamById.get(picker.teamId)?.players.length ?? 0) === 0 && (
-            <p className="text-sm text-muted-foreground">В команде нет игроков — добавьте их в «Командах».</p>
+            <p className="text-sm text-muted-foreground">{tr("live.noPlayers")}</p>
           )}
       </BottomSheet>
 
       <BottomSheet
         open={assistOpen}
-        title="Гол записан. Кто отдал пас?"
+        title={tr("live.assistTitle")}
         onClose={() => finishAssist(null)}
       >
         {assistOpen && picker?.step === "assist" && (
@@ -665,7 +668,7 @@ export function LiveConsole(props: Props) {
               />
             </div>
             <Button className="h-12 text-base" onClick={() => finishAssist(null)}>
-              Без ассиста
+              {tr("live.noAssist")}
             </Button>
             {rosterFor(picker.teamId, false, picker.scorerId).map((p) => (
               <Button key={p.id} variant="outline" className="h-12 justify-start text-base" onClick={() => finishAssist(p.id)}>
@@ -676,19 +679,18 @@ export function LiveConsole(props: Props) {
         )}
       </BottomSheet>
 
-      <BottomSheet open={picker?.step === "void"} title="Отменить событие?" onClose={() => setPicker(null)}>
+      <BottomSheet open={picker?.step === "void"} title={tr("live.voidTitle")} onClose={() => setPicker(null)}>
         {picker?.step === "void" && (
           <>
             <p className="text-sm">
-              {describeEvent(picker.event, names)}. Счёт пересчитается, событие останется в истории как
-              отменённое.
+              {tr("live.voidText", { event: describeEvent(tr, picker.event, names) })}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" onClick={() => setPicker(null)}>
-                Нет
+                {tr("live.no")}
               </Button>
               <Button variant="destructive" onClick={() => voidEvent(picker.event)}>
-                Отменить
+                {tr("live.undo")}
               </Button>
             </div>
           </>
@@ -697,17 +699,17 @@ export function LiveConsole(props: Props) {
 
       <BottomSheet
         open={!!confirmFinish}
-        title={confirmFinish === "game" ? "Завершить игру?" : "Завершить матч?"}
+        title={confirmFinish === "game" ? tr("live.finishGameTitle") : tr("live.finishMatchTitle")}
         onClose={() => setConfirmFinish(null)}
       >
         <p className="text-sm">
           {confirmFinish === "game"
-            ? "Неначатые матчи удалятся, итоги попадут в статистику. Вернуть игру будет нельзя."
-            : current && `Итог: ${current.score_a}:${current.score_b}. Завершение можно отменить, пока игра идёт.`}
+            ? tr("live.finishGameText")
+            : current && tr("live.finishMatchText", { a: current.score_a, b: current.score_b })}
         </p>
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={() => setConfirmFinish(null)}>
-            Нет
+            {tr("live.no")}
           </Button>
           <Button
             disabled={pendingAction}
@@ -732,14 +734,14 @@ export function LiveConsole(props: Props) {
               }
             }}
           >
-            Завершить
+            {tr("live.finish")}
           </Button>
         </div>
       </BottomSheet>
 
       {current && inPlay && (
         <p className="text-center text-xs text-muted-foreground">
-          {statusLabel(current)} · события пишутся с текущей минутой таймера
+          {tr("live.minuteHint", { status: statusLabel(tr, current) })}
         </p>
       )}
     </div>
@@ -747,6 +749,7 @@ export function LiveConsole(props: Props) {
 }
 
 function SyncBar({ online, pending }: { online: boolean; pending: number }) {
+  const tr = useT();
   const synced = pending === 0;
   return (
     <div
@@ -757,22 +760,21 @@ function SyncBar({ online, pending }: { online: boolean; pending: number }) {
       )}
     >
       {synced ? <CircleCheck className="size-4" aria-hidden /> : <CloudOff className="size-4" aria-hidden />}
-      {synced ? "Синхронизировано" : `Не отправлено: ${pending}`}
-      {!online && <span className="ml-auto text-xs">нет сети — всё сохранится</span>}
+      {synced ? tr("live.synced") : tr("live.unsent", { count: pending })}
+      {!online && <span className="ml-auto text-xs">{tr("live.offlineSaved")}</span>}
     </div>
   );
 }
 
-function describeEvent(e: Pick<LiveEvent, "type" | "player_id">, names: Record<string, string>) {
-  const who = names[e.player_id] ?? "игрок";
-  const what = { goal: "Гол", own_goal: "Автогол", yellow: "Жёлтая", red: "Красная", sub: "Замена" }[e.type];
-  return `${what}: ${who}`;
+function describeEvent(t: T, e: Pick<LiveEvent, "type" | "player_id">, names: Record<string, string>) {
+  const who = names[e.player_id] ?? t("live.somePlayer");
+  return t("live.eventLine", { what: t(`live.event.${e.type}` as MessageKey), who });
 }
 
-function describeItem(item: QueueItem, names: Record<string, string>) {
-  if (item.kind === "event") return describeEvent(item.payload, names);
-  if (item.kind === "void") return "отмена события";
-  if (item.kind === "attendance") return "отметка прихода";
-  if (item.kind === "new_player") return `новый игрок «${item.name}»`;
-  return "команда таймера";
+function describeItem(t: T, item: QueueItem, names: Record<string, string>) {
+  if (item.kind === "event") return describeEvent(t, item.payload, names);
+  if (item.kind === "void") return t("live.itemVoid");
+  if (item.kind === "attendance") return t("live.itemAttendance");
+  if (item.kind === "new_player") return t("live.itemNewPlayer", { name: item.name });
+  return t("live.itemTimer");
 }

@@ -10,8 +10,11 @@ import { formatGameDate, utcToZonedInputs } from "@/lib/datetime";
 import { getAppContext, getGroupMembers } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { teamColor } from "@/lib/teams/colors";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Результаты всех игр" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("cards.allResults") };
+}
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,7 +22,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 export default async function ResultsPage({ searchParams }: PageProps<"/results">) {
-  const ctx = await getAppContext();
+  const [ctx, t] = await Promise.all([getAppContext(), getT()]);
   if (!ctx.group) redirect("/");
 
   const sp = await searchParams;
@@ -55,30 +58,30 @@ export default async function ResultsPage({ searchParams }: PageProps<"/results"
         className="-ml-2 flex min-h-11 w-fit items-center gap-1 px-2 text-sm text-muted-foreground"
       >
         <ChevronLeft className="size-4" aria-hidden />
-        Статистика
+        {t("stats.title")}
       </Link>
-      <h1 className="text-2xl font-bold tracking-tight">Результаты всех игр</h1>
+      <h1 className="text-2xl font-bold tracking-tight">{t("cards.allResults")}</h1>
 
       <form method="get" className="flex flex-col gap-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="results-from">С даты</Label>
+            <Label htmlFor="results-from">{t("stats.from")}</Label>
             <Input id="results-from" name="from" type="date" defaultValue={from} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="results-to">По дату</Label>
+            <Label htmlFor="results-to">{t("stats.to")}</Label>
             <Input id="results-to" name="to" type="date" defaultValue={to} />
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="results-player">Игрок</Label>
+          <Label htmlFor="results-player">{t("gameStats.player")}</Label>
           <select
             id="results-player"
             name="player"
             defaultValue={player}
             className="h-11 rounded-lg border bg-background px-3 text-base"
           >
-            <option value="">Все игроки</option>
+            <option value="">{t("stats.allPlayers")}</option>
             {sortedMembers.map((m) => (
               <option key={m.playerId} value={m.playerId}>
                 {m.name}
@@ -89,20 +92,20 @@ export default async function ResultsPage({ searchParams }: PageProps<"/results"
         <div className="grid grid-cols-2 gap-2">
           {filtered ? (
             <Link href="/results" className={buttonVariants({ variant: "outline" })}>
-              Сбросить
+              {t("stats.reset")}
             </Link>
           ) : (
             <span />
           )}
-          <Button type="submit">Показать</Button>
+          <Button type="submit">{t("stats.show")}</Button>
         </div>
       </form>
 
-      <p className="text-sm text-muted-foreground">Найдено игр: {list.length}</p>
+      <p className="text-sm text-muted-foreground">{t("stats.found", { count: list.length })}</p>
 
       {list.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
-          {filtered ? "По этим фильтрам игр нет." : "Завершённых игр пока нет."}
+          {filtered ? t("stats.noneFiltered") : t("stats.noGames")}
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -113,7 +116,7 @@ export default async function ResultsPage({ searchParams }: PageProps<"/results"
                   <Link href={`/game/${g.game_id}`} className="flex items-start gap-2">
                     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                       <span className="font-semibold">
-                        {formatGameDate(g.starts_at, g.timezone)}
+                        {formatGameDate(t, g.starts_at, g.timezone)}
                         {g.place && <span className="font-normal text-muted-foreground"> · {g.place}</span>}
                       </span>
                       <ul className="flex flex-col gap-0.5 text-sm">

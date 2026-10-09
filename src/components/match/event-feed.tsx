@@ -1,8 +1,12 @@
+"use client";
+
 import { CloudOff, Undo2 } from "lucide-react";
 import { eventMinute } from "@/lib/match/timer";
 import type { LiveEvent, LiveMatch, LiveTeam } from "@/lib/match/types";
 import { teamColor } from "@/lib/teams/colors";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
+import type { T } from "@/lib/i18n";
 
 const ICON: Record<LiveEvent["type"], string> = {
   goal: "⚽",
@@ -12,17 +16,19 @@ const ICON: Record<LiveEvent["type"], string> = {
   sub: "🔄",
 };
 
-function describe(e: LiveEvent, names: Record<string, string>): string {
+function describe(t: T, e: LiveEvent, names: Record<string, string>): string {
   const n = (id: string | null) => (id ? names[id] ?? "?" : "?");
   switch (e.type) {
     case "goal":
-      return e.assist_player_id ? `${n(e.player_id)} (пас: ${n(e.assist_player_id)})` : n(e.player_id);
+      return e.assist_player_id
+        ? t("match.eventAssist", { player: n(e.player_id), assist: n(e.assist_player_id) })
+        : n(e.player_id);
     case "own_goal":
-      return `${n(e.player_id)} — автогол`;
+      return t("match.eventOwnGoal", { player: n(e.player_id) });
     case "yellow":
-      return `${n(e.player_id)} — жёлтая`;
+      return t("match.eventYellow", { player: n(e.player_id) });
     case "red":
-      return `${n(e.player_id)} — красная`;
+      return t("match.eventRed", { player: n(e.player_id) });
     case "sub":
       return `${n(e.player_in_id)} ↔ ${n(e.player_id)}`;
   }
@@ -41,6 +47,7 @@ type Props = {
 
 // Newest first.
 export function EventFeed({ events, matches, teams, names, pendingIds, onVoid, empty }: Props) {
+  const tr = useT();
   const matchById = new Map(matches.map((m) => [m.id, m]));
   const teamById = new Map(teams.map((t) => [t.id, t]));
   const sorted = [...events].sort(
@@ -51,7 +58,7 @@ export function EventFeed({ events, matches, teams, names, pendingIds, onVoid, e
   );
 
   if (sorted.length === 0) {
-    return <p className="py-3 text-sm text-muted-foreground">{empty ?? "Событий пока нет."}</p>;
+    return <p className="py-3 text-sm text-muted-foreground">{empty ?? tr("match.eventsEmpty")}</p>;
   }
 
   return (
@@ -75,11 +82,11 @@ export function EventFeed({ events, matches, teams, names, pendingIds, onVoid, e
               style={{ backgroundColor: color.hex }}
             />
             <span className={cn("min-w-0 flex-1 truncate text-left", isGoal && "font-semibold")}>
-              {describe(e, names)}
+              {describe(tr, e, names)}
               <span className="sr-only"> ({team?.name})</span>
             </span>
             {pendingIds?.has(e.id) && (
-              <CloudOff className="size-4 shrink-0 text-amber-600" aria-label="не отправлено" />
+              <CloudOff className="size-4 shrink-0 text-amber-600" aria-label={tr("match.unsent")} />
             )}
             {onVoid && <Undo2 className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
           </>
@@ -90,7 +97,7 @@ export function EventFeed({ events, matches, teams, names, pendingIds, onVoid, e
               <button
                 type="button"
                 onClick={() => onVoid(e)}
-                aria-label={`Отменить: ${describe(e, names)}`}
+                aria-label={tr("match.voidEvent", { event: describe(tr, e, names) })}
                 className="flex min-h-11 w-full items-center gap-2 py-1.5 active:bg-muted"
               >
                 {content}

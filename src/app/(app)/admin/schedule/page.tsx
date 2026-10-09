@@ -17,8 +17,11 @@ import { DEFAULT_TIMEZONE, todayInZone } from "@/lib/datetime";
 import { getUpcomingGames } from "@/lib/games";
 import { getAppContext } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Расписание" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("schedule.title") };
+}
 
 export default async function SchedulePage() {
   const ctx = await getAppContext();
@@ -26,6 +29,7 @@ export default async function SchedulePage() {
   if (ctx.role !== "organizer") redirect("/?notice=admin-only");
 
   const supabase = await createClient();
+  const t = await getT();
   const [{ data: schedules }, games] = await Promise.all([
     supabase
       .from("schedules")
@@ -42,15 +46,13 @@ export default async function SchedulePage() {
         className="-ml-2 flex min-h-11 w-fit items-center gap-1 px-2 text-sm text-muted-foreground"
       >
         <ChevronLeft className="size-4" aria-hidden />
-        Админ
+        {t("nav.admin")}
       </Link>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Расписание</CardTitle>
-          <CardDescription>
-            Игры на 2 недели вперёд создаются автоматически. Время — Алматы.
-          </CardDescription>
+          <CardTitle className="text-xl">{t("schedule.title")}</CardTitle>
+          <CardDescription>{t("schedule.text")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {schedules && schedules.length > 0 ? (
@@ -60,14 +62,11 @@ export default async function SchedulePage() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Расписания пока нет. Добавьте регулярную игру, например «Суббота,
-              19:00».
-            </p>
+            <p className="text-sm text-muted-foreground">{t("schedule.empty")}</p>
           )}
           <details className="rounded-lg border p-3 open:pb-4" open={!schedules?.length}>
             <summary className="flex min-h-11 cursor-pointer items-center font-medium">
-              Новое расписание
+              {t("schedule.new")}
             </summary>
             <div className="pt-2">
               <ScheduleForm />
@@ -78,10 +77,8 @@ export default async function SchedulePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Разовая игра</CardTitle>
-          <CardDescription>
-            Для переносов и дополнительных игр вне расписания.
-          </CardDescription>
+          <CardTitle className="text-xl">{t("schedule.oneOffTitle")}</CardTitle>
+          <CardDescription>{t("schedule.oneOffText")}</CardDescription>
         </CardHeader>
         <CardContent>
           <OneOffGameForm today={todayInZone(DEFAULT_TIMEZONE)} />
@@ -90,13 +87,13 @@ export default async function SchedulePage() {
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>Ближайшие игры</CardTitle>
+          <CardTitle>{t("schedule.upcoming")}</CardTitle>
         </CardHeader>
         <CardContent>
           {games.length > 0 ? (
             <UpcomingGamesList games={games} />
           ) : (
-            <p className="text-sm text-muted-foreground">Запланированных игр нет.</p>
+            <p className="text-sm text-muted-foreground">{t("schedule.noGames")}</p>
           )}
         </CardContent>
       </Card>

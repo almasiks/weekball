@@ -1,31 +1,14 @@
+import type { MessageKey, T } from "@/lib/i18n";
+
 export const DEFAULT_TIMEZONE = "Asia/Almaty";
 
 // 0 = Sunday, matches Postgres extract(dow) and schedules.weekday.
-export const WEEKDAYS = [
-  "Воскресенье",
-  "Понедельник",
-  "Вторник",
-  "Среда",
-  "Четверг",
-  "Пятница",
-  "Суббота",
-] as const;
+export const WEEKDAY_NUMBERS = [0, 1, 2, 3, 4, 5, 6] as const;
 
-const WEEKDAYS_SHORT = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"] as const;
-const MONTHS_SHORT = [
-  "янв",
-  "фев",
-  "мар",
-  "апр",
-  "мая",
-  "июн",
-  "июл",
-  "авг",
-  "сен",
-  "окт",
-  "ноя",
-  "дек",
-] as const;
+/** "Суббота" / "Сенбі" / "Saturday". */
+export function weekdayName(t: T, weekday: number): string {
+  return t(`dates.weekday.${weekday}` as MessageKey);
+}
 
 type ZonedParts = {
   year: number;
@@ -63,10 +46,12 @@ function zonedParts(date: Date, timeZone: string): ZonedParts {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-// "Сб, 4 окт, 19:00" in the given timezone.
-export function formatGameDate(iso: string, timeZone: string): string {
+// "Сб, 4 окт, 19:00" in the given timezone, in the language of `t`.
+export function formatGameDate(t: T, iso: string, timeZone: string): string {
   const p = zonedParts(new Date(iso), timeZone);
-  return `${WEEKDAYS_SHORT[p.weekday]}, ${p.day} ${MONTHS_SHORT[p.month - 1]}, ${pad(p.hour)}:${pad(p.minute)}`;
+  const weekday = t(`dates.weekdayShort.${p.weekday}` as MessageKey);
+  const month = t(`dates.monthShort.${p.month}` as MessageKey);
+  return `${weekday}, ${p.day} ${month}, ${pad(p.hour)}:${pad(p.minute)}`;
 }
 
 // "19:00" from a Postgres time value like "19:00:00".

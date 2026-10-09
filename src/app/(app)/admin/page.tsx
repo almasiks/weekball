@@ -15,18 +15,22 @@ import { MemberRoleButton } from "@/components/member-role-button";
 import { Notice } from "@/components/notice";
 import { getAppContext, getGroupMembers } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Админ" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("admin.title") };
+}
 
 export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   const ctx = await getAppContext();
   if (!ctx.group) redirect("/");
   if (ctx.role !== "organizer") redirect("/?notice=admin-only");
 
-  const [{ created }, members, siteUrl] = await Promise.all([
+  const [{ created }, members, siteUrl, t] = await Promise.all([
     searchParams,
     getGroupMembers(ctx.group.id),
     getSiteUrl(),
+    getT(),
   ]);
   const inviteUrl = `${siteUrl}/join/${ctx.group.inviteCode}`;
   const organizerCount = members.filter((m) => m.role === "organizer").length;
@@ -34,9 +38,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   return (
     <div className="flex flex-col gap-4">
       {created === "1" && (
-        <Notice variant="success">
-          Группа создана! Отправьте ссылку в чат, чтобы игроки присоединились.
-        </Notice>
+        <Notice variant="success">{t("admin.created")}</Notice>
       )}
 
       <Link
@@ -44,7 +46,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
         className="flex min-h-14 items-center gap-3 rounded-xl bg-card px-4 ring-1 ring-foreground/10"
       >
         <CalendarDays className="size-5 text-primary" aria-hidden />
-        <span className="flex-1 font-medium">Расписание и игры</span>
+        <span className="flex-1 font-medium">{t("admin.scheduleLink")}</span>
         <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
       </Link>
 
@@ -53,16 +55,14 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
         className="flex min-h-14 items-center gap-3 rounded-xl bg-card px-4 ring-1 ring-foreground/10"
       >
         <Volume2 className="size-5 text-primary" aria-hidden />
-        <span className="flex-1 font-medium">Звуки</span>
+        <span className="flex-1 font-medium">{t("admin.soundsLink")}</span>
         <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
       </Link>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Приглашение</CardTitle>
-          <CardDescription>
-            Любой, у кого есть ссылка, может вступить в группу.
-          </CardDescription>
+          <CardTitle className="text-xl">{t("admin.inviteTitle")}</CardTitle>
+          <CardDescription>{t("admin.inviteText")}</CardDescription>
         </CardHeader>
         <CardContent>
           <InviteShare inviteUrl={inviteUrl} groupName={ctx.group.name} />
@@ -72,11 +72,9 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">
-            Участники <span className="text-muted-foreground">· {members.length}</span>
+            {t("admin.membersTitle")} <span className="text-muted-foreground">· {members.length}</span>
           </CardTitle>
-          <CardDescription>
-            Организаторы могут делить на команды и вести матч.
-          </CardDescription>
+          <CardDescription>{t("admin.membersText")}</CardDescription>
         </CardHeader>
         <CardContent>
           <MemberList

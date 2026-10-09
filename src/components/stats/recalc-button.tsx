@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n/client";
 
 // Re-runs the statistics / rating recalculation (POST /api/games/[id]/finalize).
 export function RecalcButton({ gameId }: { gameId: string }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ export function RecalcButton({ gameId }: { gameId: string }) {
         if (!res.ok) throw new Error(String(res.status));
         router.refresh();
       } catch {
-        setError("Не получилось. Проверьте интернет и попробуйте ещё раз.");
+        setError(t("game.recalcFailed"));
       }
     });
   }
@@ -28,7 +30,7 @@ export function RecalcButton({ gameId }: { gameId: string }) {
     <div className="flex flex-col gap-1">
       <Button variant="secondary" disabled={pending} onClick={run}>
         <RefreshCw className={pending ? "animate-spin" : undefined} aria-hidden />
-        {pending ? "Пересчитываем…" : "Пересчитать"}
+        {pending ? t("game.recalculating") : t("game.recalc")}
       </Button>
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

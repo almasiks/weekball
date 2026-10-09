@@ -4,7 +4,7 @@
 // through the offline queue straight from the browser.
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { toMessage } from "@/lib/errors";
+import { toMessage } from "@/lib/i18n/server";
 
 export type ActionResult = { error?: string };
 
@@ -16,7 +16,7 @@ function revalidateGame(gameId: string) {
 
 async function done(gameId: string, call: PromiseLike<{ error: { message?: string } | null }>) {
   const { error } = await call;
-  if (error) return { error: toMessage(error) };
+  if (error) return { error: await toMessage(error) };
   revalidateGame(gameId);
   return {};
 }
@@ -38,7 +38,7 @@ export async function createMatchAction(
     p_team_a_id: teamA,
     p_team_b_id: teamB,
   });
-  if (error) return { error: toMessage(error) };
+  if (error) return { error: await toMessage(error) };
   revalidateGame(gameId);
   return { id: data.id };
 }

@@ -6,6 +6,7 @@ import { GuestLiveView } from "@/components/live/guest-live-view";
 import { formatGameDate } from "@/lib/datetime";
 import { LIVE_TOKEN, type PublicLiveGame } from "@/lib/match/public";
 import type { Database } from "@/lib/supabase/database.types";
+import { getT } from "@/lib/i18n/server";
 
 // Anonymous read through the security-definer RPC — works without any session.
 const loadLive = cache(async (token: string): Promise<PublicLiveGame | null> => {
@@ -21,7 +22,7 @@ const loadLive = cache(async (token: string): Promise<PublicLiveGame | null> => 
 
 export async function generateMetadata({ params }: PageProps<"/live/[token]">): Promise<Metadata> {
   const { token } = await params;
-  const live = await loadLive(token);
+  const [live, t] = await Promise.all([loadLive(token), getT()]);
   if (!live) return { title: "Live", robots: { index: false } };
 
   const teamName = (id: string) => live.teams.find((t) => t.id === id)?.name ?? "?";
@@ -32,8 +33,8 @@ export async function generateMetadata({ params }: PageProps<"/live/[token]">): 
     : `${live.game.group_name}: live`;
   const description = [
     live.game.group_name,
-    formatGameDate(live.game.starts_at, live.game.timezone),
-    current && (current.status === "finished" ? "матч завершён" : "идёт матч"),
+    formatGameDate(t, live.game.starts_at, live.game.timezone),
+    current && (current.status === "finished" ? t("match.ogFinished") : t("match.ogLive")),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -51,7 +52,7 @@ export default async function PublicLivePage({ params }: PageProps<"/live/[token
   const { token } = await params;
   const live = await loadLive(token);
   if (!live) {
-    return <Notice variant="error">Ссылка недействительна или отключена организатором.</Notice>;
+    return <Notice variant="error">{(await getT())("match.linkInvalid")}</Notice>;
   }
   return <GuestLiveView token={token} initial={live} />;
 }

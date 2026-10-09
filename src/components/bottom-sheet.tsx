@@ -3,6 +3,7 @@
 import { useEffect, useId } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n/client";
 
 type Props = {
   open: boolean;
@@ -13,6 +14,7 @@ type Props = {
 
 // Mobile-friendly action sheet: slides up from the bottom, closes on backdrop / Esc.
 export function BottomSheet({ open, title, onClose, children }: Props) {
+  const t = useT();
   const titleId = useId();
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export function BottomSheet({ open, title, onClose, children }: Props) {
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <button
         type="button"
-        aria-label="Закрыть"
+        aria-label={t("common.close")}
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
@@ -47,7 +49,7 @@ export function BottomSheet({ open, title, onClose, children }: Props) {
           <h2 id={titleId} className="flex-1 truncate text-base font-semibold">
             {title}
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label={t("common.close")}>
             <X aria-hidden />
           </Button>
         </div>

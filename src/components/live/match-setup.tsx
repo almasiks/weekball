@@ -11,6 +11,7 @@ import type { LiveMatch, LiveTeam } from "@/lib/match/types";
 import { statusLabel } from "@/components/match/scoreboard";
 import { teamColor } from "@/lib/teams/colors";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 type Props = {
   gameId: string;
@@ -24,6 +25,7 @@ type Props = {
 };
 
 export function MatchSetup({ gameId, teams, matches, currentId, onSelect, formatText, disabled }: Props) {
+  const tr = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -42,29 +44,29 @@ export function MatchSetup({ gameId, teams, matches, currentId, onSelect, format
   }
 
   if (teams.length < 2) {
-    return <Notice>Сначала разделите игроков хотя бы на 2 команды.</Notice>;
+    return <Notice>{tr("match.needTeams")}</Notice>;
   }
 
   return (
     <Card size="sm">
       <CardHeader>
-        <CardTitle>Матчи</CardTitle>
+        <CardTitle>{tr("game.matches")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {matches.length === 0 ? (
           <>
-            <p className="text-sm text-muted-foreground">Формат: {formatText}. Изменить можно на странице игры.</p>
+            <p className="text-sm text-muted-foreground">{tr("match.formatHint", { format: formatText })}</p>
             <Button
               size="lg"
               disabled={pending || disabled}
               onClick={() => run(() => generateRoundRobinAction(gameId))}
             >
               <Shuffle aria-hidden />
-              {teams.length === 2 ? "Создать матч" : `Сгенерировать матчи (${(teams.length * (teams.length - 1)) / 2})`}
+              {teams.length === 2 ? tr("match.create") : tr("match.generate", { count: (teams.length * (teams.length - 1)) / 2 })}
             </Button>
           </>
         ) : (
-          <ul className="flex flex-col gap-1.5" aria-label="Выбор матча">
+          <ul className="flex flex-col gap-1.5" aria-label={tr("match.pick")}>
             {matches.map((m) => {
               const a = teamById.get(m.team_a_id);
               const b = teamById.get(m.team_b_id);
@@ -85,7 +87,7 @@ export function MatchSetup({ gameId, teams, matches, currentId, onSelect, format
                       {a?.name} <span className="tabular-nums">{m.score_a}:{m.score_b}</span> {b?.name}
                     </span>
                     <Dot color={b?.color} />
-                    <span className="shrink-0 text-xs text-muted-foreground">{statusLabel(m)}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{statusLabel(tr, m)}</span>
                   </button>
                 </li>
               );
@@ -101,7 +103,7 @@ export function MatchSetup({ gameId, teams, matches, currentId, onSelect, format
             onClick={() => run(() => deleteMatchAction(gameId, current.id))}
           >
             <Trash2 aria-hidden />
-            Удалить этот матч
+            {tr("match.deleteThis")}
           </Button>
         )}
 
@@ -111,8 +113,8 @@ export function MatchSetup({ gameId, teams, matches, currentId, onSelect, format
               <div className="grid grid-cols-2 gap-2">
                 {(
                   [
-                    [teamA, setTeamA, "Команда 1"],
-                    [teamB, setTeamB, "Команда 2"],
+                    [teamA, setTeamA, tr("match.team1")],
+                    [teamB, setTeamB, tr("match.team2")],
                   ] as const
                 ).map(([value, setter, label]) => (
                   <select
@@ -132,20 +134,20 @@ export function MatchSetup({ gameId, teams, matches, currentId, onSelect, format
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" onClick={() => setAdding(false)}>
-                  Отмена
+                  {tr("match.cancel")}
                 </Button>
                 <Button
                   disabled={pending || teamA === teamB}
                   onClick={() => run(() => createMatchAction(gameId, teamA, teamB), () => setAdding(false))}
                 >
-                  Добавить
+                  {tr("match.add")}
                 </Button>
               </div>
             </div>
           ) : (
             <Button variant="outline" onClick={() => setAdding(true)}>
               <Plus aria-hidden />
-              Ещё матч
+              {tr("match.another")}
             </Button>
           )
         )}

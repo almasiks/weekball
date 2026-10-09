@@ -5,15 +5,18 @@ import { ChevronLeft } from "lucide-react";
 import { SoundsManager } from "@/components/admin/sounds-manager";
 import { getAppContext } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Звуки" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("sounds.title") };
+}
 
 export default async function SoundsPage() {
   const ctx = await getAppContext();
   if (!ctx.group) redirect("/");
   if (ctx.role !== "organizer") redirect("/?notice=admin-only");
 
-  const supabase = await createClient();
+  const [supabase, t] = await Promise.all([createClient(), getT()]);
   const { data: sounds } = await supabase
     .from("sounds")
     .select("id, name, file_path, builtin_key, sort_order")
@@ -27,12 +30,12 @@ export default async function SoundsPage() {
         className="-ml-2 flex min-h-11 w-fit items-center gap-1 px-2 text-sm text-muted-foreground"
       >
         <ChevronLeft className="size-4" aria-hidden />
-        Админ
+        {t("nav.admin")}
       </Link>
       <header>
-        <h1 className="text-2xl font-bold tracking-tight">Звуки</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("sounds.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Кнопки на экране матча. Играют только на телефоне организатора.
+          {t("sounds.pageText")}
         </p>
       </header>
       <SoundsManager groupId={ctx.group.id} sounds={sounds ?? []} />

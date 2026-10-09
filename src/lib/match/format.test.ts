@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyGoalLimit, formatLabel, timeUpAt } from "./format";
 import { computeElapsed } from "./timer";
 import type { LiveEvent, LiveMatch } from "./types";
+import { translator } from "@/lib/i18n";
 
 const base: LiveMatch = {
   id: "m",
@@ -38,9 +39,17 @@ const NOW = "2026-10-03T14:10:00.000Z";
 
 describe("formatLabel", () => {
   it("formats the goal limit with the right Russian form", () => {
-    expect(formatLabel(2, 7)).toBe("до 2 голов · 7 мин");
-    expect(formatLabel(1, 5)).toBe("до 1 гола · 5 мин");
-    expect(formatLabel(null, 10)).toBe("без лимита голов · 10 мин");
+    const ru = translator("ru");
+    expect(formatLabel(ru, 2, 7)).toBe("до 2 голов · 7 мин");
+    expect(formatLabel(ru, 1, 5)).toBe("до 1 гола · 5 мин");
+    expect(formatLabel(ru, null, 10)).toBe("без лимита голов · 10 мин");
+  });
+
+  it("follows the interface language", () => {
+    expect(formatLabel(translator("en"), 1, 5)).toBe("first to 1 goal · 5 min");
+    expect(formatLabel(translator("en"), 2, 7)).toBe("first to 2 goals · 7 min");
+    expect(formatLabel(translator("kk"), 2, 7)).toBe("2 голға дейін · 7 мин");
+    expect(formatLabel(translator("kk"), null, 10)).toBe("гол шегі жоқ · 10 мин");
   });
 });
 

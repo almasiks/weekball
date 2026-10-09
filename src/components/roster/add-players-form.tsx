@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/notice";
 import { addPlayersAction } from "@/lib/actions/roster";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase().replace(/ё/g, "е");
 
@@ -14,6 +15,7 @@ type Props = { groupId: string; existingNames: string[] };
 
 // Paste many names (one per line) -> preview with possible duplicates -> add.
 export function AddPlayersForm({ groupId, existingNames }: Props) {
+  const t = useT();
   const [text, setText] = useState("");
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ ok?: string; error?: string } | null>(null);
@@ -27,7 +29,7 @@ export function AddPlayersForm({ groupId, existingNames }: Props) {
   names.forEach((n) => seen.set(norm(n), (seen.get(norm(n)) ?? 0) + 1));
   const preview = names.map((n) => ({
     name: n,
-    duplicate: existing.has(norm(n)) ? "уже есть в составе" : (seen.get(norm(n)) ?? 0) > 1 ? "повторяется в списке" : null,
+    duplicate: existing.has(norm(n)) ? t("roster.dupExists") : (seen.get(norm(n)) ?? 0) > 1 ? t("roster.dupRepeated") : null,
   }));
   const dupCount = preview.filter((p) => p.duplicate).length;
 
@@ -37,7 +39,7 @@ export function AddPlayersForm({ groupId, existingNames }: Props) {
       const r = await addPlayersAction(groupId, text);
       if (r.error) setMessage({ error: r.error });
       else {
-        setMessage({ ok: `Добавлено: ${r.added}.` });
+        setMessage({ ok: t("roster.added", { count: r.added ?? 0 }) });
         setText("");
       }
     });
@@ -46,7 +48,7 @@ export function AddPlayersForm({ groupId, existingNames }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="roster-names">Имена — по одному на строку</Label>
+        <Label htmlFor="roster-names">{t("roster.namesLabel")}</Label>
         <textarea
           id="roster-names"
           value={text}
@@ -60,10 +62,10 @@ export function AddPlayersForm({ groupId, existingNames }: Props) {
       {preview.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <p className="text-sm text-muted-foreground">
-            Будет добавлено: {preview.length}
-            {dupCount > 0 && ` · возможных дублей: ${dupCount}`}
+            {t("roster.willAdd", { count: preview.length })}
+            {dupCount > 0 && t("roster.possibleDups", { count: dupCount })}
           </p>
-          <ul className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto" aria-label="Предпросмотр">
+          <ul className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto" aria-label={t("roster.preview")}>
             {preview.map((p, i) => (
               <li
                 key={`${p.name}-${i}`}
@@ -80,8 +82,7 @@ export function AddPlayersForm({ groupId, existingNames }: Props) {
           </ul>
           {dupCount > 0 && (
             <p className="text-xs text-amber-800 dark:text-amber-300">
-              Подсвеченные имена похожи на уже существующие. Если это тот же человек — удалите строку,
-              или потом объедините дубли через меню игрока.
+              {t("roster.dupHint")}
             </p>
           )}
         </div>
@@ -91,7 +92,7 @@ export function AddPlayersForm({ groupId, existingNames }: Props) {
       {message?.ok && <Notice variant="success">{message.ok}</Notice>}
       <Button size="lg" disabled={pending || preview.length === 0} onClick={submit}>
         <UserPlus aria-hidden />
-        {preview.length ? `Добавить ${preview.length}` : "Добавить"}
+        {preview.length ? t("roster.addCount", { count: preview.length }) : t("roster.add")}
       </Button>
     </div>
   );

@@ -10,14 +10,17 @@ import { formatGameDate } from "@/lib/datetime";
 import { getGameView } from "@/lib/games";
 import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Команды" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("teams.title") };
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function TeamsPage({ params }: PageProps<"/game/[id]/teams">) {
   const { id } = await params;
-  const ctx = await getAppContext();
+  const [ctx, t] = await Promise.all([getAppContext(), getT()]);
   const view = UUID.test(id) && ctx.userId ? await getGameView(id) : null;
   if (!view) redirect(`/game/${id}`);
 
@@ -36,24 +39,24 @@ export default async function TeamsPage({ params }: PageProps<"/game/[id]/teams"
         className="-ml-2 flex min-h-11 w-fit items-center gap-1 px-2 text-sm text-muted-foreground"
       >
         <ChevronLeft className="size-4" aria-hidden />
-        К игре
+        {t("game.toGame")}
       </Link>
       <header>
         <h1 className="text-2xl font-bold tracking-tight">
-          {view.game.draft_active ? "Драфт" : "Команды"}
+          {view.game.draft_active ? t("teams.draftTitle") : t("teams.title")}
         </h1>
         <p className="text-sm text-muted-foreground">
-          {formatGameDate(view.game.starts_at, view.game.timezone)}
+          {formatGameDate(t, view.game.starts_at, view.game.timezone)}
           {view.game.place && ` · ${view.game.place}`}
         </p>
       </header>
 
       {!editable ? (
-        <Notice variant="error">Игра отменена или завершена — составы менять нельзя.</Notice>
+        <Notice variant="error">{t("teams.lockedGame")}</Notice>
       ) : view.game.draft_active ? (
         <DraftPanel view={view} userId={ctx.playerId} isOrganizer={isOrganizer} />
       ) : view.going.length === 0 ? (
-        <Notice>На игру пока никто не записан — делить некого.</Notice>
+        <Notice>{t("teams.noSignups")}</Notice>
       ) : (
         <TeamsBoard view={view} shareUrl={shareUrl} />
       )}

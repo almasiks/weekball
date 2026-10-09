@@ -5,6 +5,8 @@ import { del, get, set } from "idb-keyval";
 import { createClient } from "@/lib/supabase/client";
 import { toMessage } from "@/lib/errors";
 import { OutboxQueue, shouldRetry, type QueueItem, type QueueStorage, type SendResult } from "./queue";
+import { useT } from "@/lib/i18n/client";
+import type { T } from "@/lib/i18n";
 
 function idbStorage(key: string): QueueStorage {
   return {
@@ -28,6 +30,7 @@ async function sendItem(
   supabase: ReturnType<typeof createClient>,
   gameId: string,
   item: QueueItem,
+  t: T,
 ): Promise<SendResult> {
   let error: { code?: string; message?: string } | null = null;
   if (item.kind === "event") {
@@ -64,7 +67,7 @@ async function sendItem(
                 : await supabase.rpc("finish_match", { ...base, p_reason: cmd.reason ?? "manual" }));
   }
   if (!error) return { ok: true };
-  return { ok: false, retry: shouldRetry(error), error: toMessage(error) };
+  return { ok: false, retry: shouldRetry(error), error: toMessage(t, error) };
 }
 
 /**
@@ -77,15 +80,18 @@ export function useOutbox(gameId: string, onSent: () => void, serverVersion: unk
   const [online, setOnline] = useState(true);
   const queueRef = useRef<OutboxQueue | null>(null);
   const onSentRef = useRef(onSent);
+  const t = useT();
+  const tRef = useRef(t);
   useEffect(() => {
     onSentRef.current = onSent;
-  }, [onSent]);
+    tRef.current = t;
+  }, [onSent, t]);
 
   useEffect(() => {
     const supabase = createClient();
     const queue = new OutboxQueue(
       idbStorage(`weekball:outbox:${gameId}`),
-      (item) => sendItem(supabase, gameId, item),
+      (item) => sendItem(supabase, gameId, item, tRef.current),
       (item) => {
         setSent((s) => [...s, item]);
         onSentRef.current();

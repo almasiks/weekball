@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { selectClassName } from "@/components/schedule/schedule-form";
 import { createMatchAction } from "@/lib/actions/matches";
 import type { LiveMatch, LiveTeam } from "@/lib/match/types";
+import { useT } from "@/lib/i18n/client";
 
 type Props = {
   gameId: string;
@@ -24,6 +25,7 @@ function suggestPair(teams: LiveTeam[], last: LiveMatch): [string, string] {
 }
 
 export function NextMatchPicker({ gameId, teams, lastMatch, onCreated }: Props) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const [[teamA, teamB], setPair] = useState(() => suggestPair(teams, lastMatch));
   const [pending, startTransition] = useTransition();
@@ -38,7 +40,7 @@ export function NextMatchPicker({ gameId, teams, lastMatch, onCreated }: Props) 
           setOpen(true);
         }}
       >
-        Следующий матч
+        {tr("match.next")}
         <ChevronRight aria-hidden />
       </Button>
     );
@@ -48,7 +50,7 @@ export function NextMatchPicker({ gameId, teams, lastMatch, onCreated }: Props) 
     setError(null);
     startTransition(async () => {
       const result = await createMatchAction(gameId, teamA, teamB);
-      if (result.error || !result.id) setError(result.error ?? "Не удалось создать матч.");
+      if (result.error || !result.id) setError(result.error ?? tr("match.createFailed"));
       else {
         setOpen(false);
         onCreated(result.id);
@@ -58,12 +60,12 @@ export function NextMatchPicker({ gameId, teams, lastMatch, onCreated }: Props) 
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border p-3">
-      <p className="text-sm font-medium">Следующий матч</p>
+      <p className="text-sm font-medium">{tr("match.next")}</p>
       <div className="grid grid-cols-2 gap-2">
         {(
           [
-            ["next-a", "Команда 1", teamA, (v: string) => setPair([v, teamB])],
-            ["next-b", "Команда 2", teamB, (v: string) => setPair([teamA, v])],
+            ["next-a", tr("match.team1"), teamA, (v: string) => setPair([v, teamB])],
+            ["next-b", tr("match.team2"), teamB, (v: string) => setPair([teamA, v])],
           ] as const
         ).map(([id, label, value, set]) => (
           <div key={id} className="flex flex-col gap-1">
@@ -83,10 +85,10 @@ export function NextMatchPicker({ gameId, teams, lastMatch, onCreated }: Props) 
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" disabled={pending} onClick={() => setOpen(false)}>
-          Отмена
+          {tr("match.cancel")}
         </Button>
         <Button disabled={pending || teamA === teamB} onClick={create}>
-          Создать
+          {tr("match.createShort")}
         </Button>
       </div>
     </div>

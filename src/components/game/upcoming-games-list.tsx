@@ -2,13 +2,14 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { formatGameDate } from "@/lib/datetime";
 import type { GameRow } from "@/lib/supabase/database.types";
+import { getT } from "@/lib/i18n/server";
 
-const STATUS_HINT: Partial<Record<GameRow["status"], string>> = {
-  closed: "запись закрыта",
-  cancelled: "отменена",
-};
+const STATUS_HINT = { closed: "game.hintClosed", cancelled: "game.hintCancelled" } as const;
 
-export function UpcomingGamesList({ games }: { games: GameRow[] }) {
+export async function UpcomingGamesList({ games }: { games: GameRow[] }) {
+  const t = await getT();
+  const hint = (status: GameRow["status"]) =>
+    status === "closed" || status === "cancelled" ? t(STATUS_HINT[status]) : null;
   return (
     <ul className="divide-y">
       {games.map((game) => (
@@ -25,11 +26,11 @@ export function UpcomingGamesList({ games }: { games: GameRow[] }) {
                     : "font-medium"
                 }
               >
-                {formatGameDate(game.starts_at, game.timezone)}
+                {formatGameDate(t, game.starts_at, game.timezone)}
               </span>
               <span className="truncate text-xs text-muted-foreground">
-                {[game.place, STATUS_HINT[game.status]].filter(Boolean).join(" · ") ||
-                  `до ${game.max_players} игроков`}
+                {[game.place, hint(game.status)].filter(Boolean).join(" · ") ||
+                  t("game.upTo", { count: game.max_players })}
               </span>
             </div>
             <ChevronRight className="size-4 text-muted-foreground" aria-hidden />

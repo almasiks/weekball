@@ -3,10 +3,12 @@
 import { useOptimistic, useState, useTransition } from "react";
 import { setPlayerLevelAction } from "@/lib/actions/teams";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 const LEVELS = [1, 2, 3, 4, 5];
 
 export function LevelPicker({ playerId, level, name }: { playerId: string; level: number; name: string }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [current, setOptimistic] = useOptimistic(level);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +25,7 @@ export function LevelPicker({ playerId, level, name }: { playerId: string; level
 
   return (
     <div className="flex flex-col gap-1">
-      <div role="radiogroup" aria-label={`Уровень: ${name}`} className="flex gap-1.5">
+      <div role="radiogroup" aria-label={t("common.levelOf", { name })} className="flex gap-1.5">
         {LEVELS.map((value) => (
           <button
             key={value}

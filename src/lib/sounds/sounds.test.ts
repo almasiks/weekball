@@ -61,7 +61,7 @@ describe("checkSoundFile", () => {
   it("accepts mp3/m4a/wav up to 2 MB", () => {
     expect(checkSoundFile({ name: "Goal.MP3", size: 1000 })).toEqual({ contentType: "audio/mpeg", ext: "mp3" });
     expect(checkSoundFile({ name: "a.m4a", size: 1000 })).toEqual({ contentType: "audio/mp4", ext: "m4a" });
-    expect(checkSoundFile({ name: "a.ogg", size: 1000 })).toBe("Поддерживаются mp3, m4a и wav.");
-    expect(checkSoundFile({ name: "a.wav", size: 3 * 1024 * 1024 })).toBe("Файл больше 2 МБ.");
+    expect(checkSoundFile({ name: "a.ogg", size: 1000 })).toBe("sounds.error.type");
+    expect(checkSoundFile({ name: "a.wav", size: 3 * 1024 * 1024 })).toBe("sounds.error.size");
   });
 });

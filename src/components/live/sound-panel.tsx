@@ -4,16 +4,23 @@ import { useEffect, useState } from "react";
 import { CloudOff, Download, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { BUILTIN_SOUNDS, type BuiltinKey } from "@/lib/sounds/builtin";
+import { BUILTIN_SOUNDS, builtinLabel, builtinSpeech, type BuiltinKey } from "@/lib/sounds/builtin";
 import { getSoundEngine, type PlayableSound } from "@/lib/sounds/engine";
 import type { SoundRow } from "@/lib/supabase/database.types";
+import { useT } from "@/lib/i18n/client";
+import type { T } from "@/lib/i18n";
 
 export type PanelSound = Pick<SoundRow, "id" | "name" | "file_path" | "builtin_key" | "sort_order">;
 
 /** A built-in button, replaced by the group's own file when there is one. */
-export function builtinSound(key: BuiltinKey, sounds: PanelSound[]): PlayableSound {
+export function builtinSound(key: BuiltinKey, sounds: PanelSound[], t: T): PlayableSound {
   const builtin = BUILTIN_SOUNDS.find((b) => b.key === key)!;
-  return { key, builtin, filePath: sounds.find((s) => s.builtin_key === key)?.file_path ?? null };
+  return {
+    key,
+    builtin,
+    speech: builtinSpeech(t, key),
+    filePath: sounds.find((s) => s.builtin_key === key)?.file_path ?? null,
+  };
 }
 
 async function download(path: string): Promise<ArrayBuffer | null> {
@@ -26,12 +33,13 @@ type Props = { sounds: PanelSound[] };
 
 // Big sound buttons under the timer. Plays only on this device (the organizer's).
 export function SoundPanel({ sounds }: Props) {
+  const t = useT();
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
   const [loaded, setLoaded] = useState<{ ok: number; failed: number } | null>(null);
 
   const items: { id: string; label: string; sound: PlayableSound }[] = [
-    ...BUILTIN_SOUNDS.map((b) => ({ id: b.key, label: b.label, sound: builtinSound(b.key, sounds) })),
+    ...BUILTIN_SOUNDS.map((b) => ({ id: b.key, label: builtinLabel(t, b.key), sound: builtinSound(b.key, sounds, t) })),
     ...sounds
       .filter((s) => !s.builtin_key)
       .sort((a, b) => a.sort_order - b.sort_order)
@@ -72,7 +80,7 @@ export function SoundPanel({ sounds }: Props) {
   }
 
   return (
-    <section aria-label="Звуки" className="flex flex-col gap-2">
+    <section aria-label={t("sounds.title")} className="flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-2">
         {items.map((item) => (
           <Button
@@ -90,7 +98,7 @@ export function SoundPanel({ sounds }: Props) {
         <Button
           variant="ghost"
           size="icon"
-          aria-label={muted ? "Включить звук" : "Выключить звук"}
+          aria-label={muted ? t("sounds.unmute") : t("sounds.mute")}
           aria-pressed={muted}
           onClick={() => {
             const next = !muted;
@@ -106,7 +114,7 @@ export function SoundPanel({ sounds }: Props) {
           max={1}
           step={0.05}
           value={volume}
-          aria-label="Громкость"
+          aria-label={t("sounds.volume")}
           disabled={muted}
           onChange={(e) => {
             const v = Number(e.target.value);
@@ -120,12 +128,12 @@ export function SoundPanel({ sounds }: Props) {
             {loaded.failed > 0 ? (
               <>
                 <CloudOff className="size-3.5" aria-hidden />
-                не загружено: {loaded.failed}
+                {t("sounds.notLoaded", { count: loaded.failed })}
               </>
             ) : (
               <>
                 <Download className="size-3.5" aria-hidden />
-                на телефоне
+                {t("sounds.onPhone")}
               </>
             )}
           </span>

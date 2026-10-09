@@ -6,11 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScheduleForm } from "@/components/schedule/schedule-form";
 import { toggleScheduleAction } from "@/lib/actions/games";
-import { WEEKDAYS, formatTime } from "@/lib/datetime";
+import { formatTime, weekdayName } from "@/lib/datetime";
 import { formatLabel } from "@/lib/match/format";
 import type { ScheduleRow } from "@/lib/supabase/database.types";
+import { useT } from "@/lib/i18n/client";
 
 export function ScheduleItem({ schedule }: { schedule: ScheduleRow }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -29,16 +31,16 @@ export function ScheduleItem({ schedule }: { schedule: ScheduleRow }) {
       <div className="flex items-start gap-2">
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="font-medium">
-            {WEEKDAYS[schedule.weekday]}, {formatTime(schedule.start_time)}
+            {weekdayName(t, schedule.weekday)}, {formatTime(schedule.start_time)}
           </span>
           <span className="text-sm text-muted-foreground">
-            {[schedule.place, `до ${schedule.max_players} игроков`, formatLabel(schedule.goal_limit, schedule.match_minutes)]
+            {[schedule.place, t("schedule.upTo", { count: schedule.max_players }), formatLabel(t, schedule.goal_limit, schedule.match_minutes)]
               .filter(Boolean)
               .join(" · ")}
           </span>
         </div>
         <Badge variant={schedule.is_active ? "secondary" : "outline"}>
-          {schedule.is_active ? "Активно" : "Отключено"}
+          {schedule.is_active ? t("schedule.active") : t("schedule.inactive")}
         </Badge>
       </div>
 
@@ -46,17 +48,17 @@ export function ScheduleItem({ schedule }: { schedule: ScheduleRow }) {
         <div className="flex flex-col gap-2 rounded-lg border p-3">
           <ScheduleForm schedule={schedule} onSaved={closeEditor} />
           <Button variant="ghost" onClick={closeEditor}>
-            Отмена
+            {t("schedule.cancel")}
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={() => setEditing(true)}>
             <Pencil aria-hidden />
-            Изменить
+            {t("schedule.edit")}
           </Button>
           <Button variant="outline" disabled={pending} onClick={toggle}>
-            {schedule.is_active ? "Отключить" : "Включить"}
+            {schedule.is_active ? t("schedule.turnOff") : t("schedule.turnOn")}
           </Button>
         </div>
       )}

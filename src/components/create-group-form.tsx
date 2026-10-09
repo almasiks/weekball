@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/notice";
 import { SubmitButton } from "@/components/submit-button";
+import { useT } from "@/lib/i18n/client";
 
 export function CreateGroupForm({ defaultName }: { defaultName?: string }) {
+  const t = useT();
   const [state, formAction] = useActionState<FormState, FormData>(
     createGroupAction,
     {},
@@ -17,22 +19,22 @@ export function CreateGroupForm({ defaultName }: { defaultName?: string }) {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="groupName">Название группы</Label>
+        <Label htmlFor="groupName">{t("start.groupName")}</Label>
         <Input
           id="groupName"
           name="groupName"
-          placeholder="Футбол по субботам"
+          placeholder={t("start.groupNamePlaceholder")}
           maxLength={60}
           required
           autoComplete="off"
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="playerName">Ваше имя</Label>
+        <Label htmlFor="playerName">{t("start.yourName")}</Label>
         <Input
           id="playerName"
           name="playerName"
-          placeholder="Как вас называть в составе"
+          placeholder={t("start.yourNamePlaceholder")}
           defaultValue={defaultName}
           maxLength={40}
           required
@@ -40,8 +42,8 @@ export function CreateGroupForm({ defaultName }: { defaultName?: string }) {
         />
       </div>
       {state.error && <Notice variant="error">{state.error}</Notice>}
-      <SubmitButton size="lg" pendingText="Создаём…">
-        Создать группу
+      <SubmitButton size="lg" pendingText={t("start.creating")}>
+        {t("start.submit")}
       </SubmitButton>
     </form>
   );

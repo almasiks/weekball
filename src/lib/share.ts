@@ -1,4 +1,5 @@
 import { formatGameDate } from "@/lib/datetime";
+import type { T } from "@/lib/i18n";
 import { teamColor } from "@/lib/teams/colors";
 import type { GameStatus } from "@/lib/supabase/database.types";
 
@@ -13,16 +14,14 @@ type ShareInput = {
 };
 
 // "Сб, 4 окт, 19:00, Поле на Абая. Записываемся! Уже 12 из 20. Ссылка: …"
-export function gameShareText(g: ShareInput): string {
-  const when = formatGameDate(g.startsAt, g.timezone);
+export function gameShareText(t: T, g: ShareInput): string {
+  const when = formatGameDate(t, g.startsAt, g.timezone);
   const where = g.place ? `, ${g.place}` : "";
   const call =
     g.status === "cancelled"
-      ? "Игра отменена."
-      : g.status === "signup"
-        ? `Записываемся! Уже ${g.goingCount} из ${g.maxPlayers}.`
-        : `Запись закрыта, в составе ${g.goingCount} из ${g.maxPlayers}.`;
-  return `${when}${where}. ${call} Ссылка: ${g.url}`;
+      ? t("share.gameCancelled")
+      : t(g.status === "signup" ? "share.gameSignup" : "share.gameClosed", { going: g.goingCount, max: g.maxPlayers });
+  return `${when}${where}. ${call} ${t("common.link", { url: g.url })}`;
 }
 
 type TeamsShareInput = {
@@ -33,14 +32,14 @@ type TeamsShareInput = {
 };
 
 // "Составы на Сб, 4 окт, 19:00:\n🔴 Красные: Иван, Пётр\n🔵 Синие: …\nСсылка: …"
-export function teamsShareText(input: TeamsShareInput): string {
+export function teamsShareText(t: T, input: TeamsShareInput): string {
   const lines = input.teams.map(
     (t) => `${t.emoji} ${t.name}: ${t.players.length ? t.players.join(", ") : "—"}`,
   );
   return [
-    `Составы на ${formatGameDate(input.startsAt, input.timezone)}:`,
+    t("share.teamsTitle", { when: formatGameDate(t, input.startsAt, input.timezone) }),
     ...lines,
-    `Ссылка: ${input.url}`,
+    t("common.link", { url: input.url }),
   ].join("\n");
 }
 
@@ -49,6 +48,7 @@ type ResultMatch = { id: string; team_a_id: string; team_b_id: string; score_a: 
 type ResultEvent = { match_id: string; type: string; team_id: string; player_id: string };
 
 function scorersLine(
+  t: T,
   team: ResultTeam,
   opponentId: string,
   events: ResultEvent[],
@@ -61,7 +61,7 @@ function scorersLine(
       const name = names[e.player_id] ?? "?";
       counts.set(name, (counts.get(name) ?? 0) + 1);
     } else if (e.type === "own_goal" && e.team_id === opponentId) {
-      own.push(`автогол (${names[e.player_id] ?? "?"})`);
+      own.push(t("share.ownGoal", { name: names[e.player_id] ?? "?" }));
     }
   }
   const parts = [...[...counts].map(([n, c]) => (c > 1 ? `${n} ${c}` : n)), ...own];
@@ -69,7 +69,7 @@ function scorersLine(
 }
 
 // "⚽ Красные 3:2 Синие\n🔴 Красные: Иван 2, Пётр\n🔵 Синие: …\nСсылка: …"
-export function matchResultText(input: {
+export function matchResultText(t: T, input: {
   match: ResultMatch;
   teams: ResultTeam[];
   events: ResultEvent[];
@@ -81,19 +81,19 @@ export function matchResultText(input: {
   const b = teams.find((t) => t.id === match.team_b_id);
   if (!a || !b) return url;
   const events = input.events.filter((e) => e.match_id === match.id);
-  const status = match.status === "finished" ? "" : " (идёт матч)";
+  const status = match.status === "finished" ? "" : ` ${t("share.matchLive")}`;
   return [
     `⚽ ${a.name} ${match.score_a}:${match.score_b} ${b.name}${status}`,
-    scorersLine(a, b.id, events, names),
-    scorersLine(b, a.id, events, names),
-    `Ссылка: ${url}`,
+    scorersLine(t, a, b.id, events, names),
+    scorersLine(t, b, a.id, events, names),
+    t("common.link", { url }),
   ]
     .filter(Boolean)
     .join("\n");
 }
 
 // Results of every match + the table of the evening.
-export function gameSummaryText(input: {
+export function gameSummaryText(t: T, input: {
   startsAt: string;
   timezone: string;
   teams: ResultTeam[];
@@ -105,8 +105,10 @@ export function gameSummaryText(input: {
 }): string {
   const scorers = input.topScorers ?? [];
   const extras = [
-    input.mvp ? `⭐ Игрок вечера: ${input.mvp}` : null,
-    scorers.length ? `⚽ Бомбардир: ${scorers.map((s) => s.name).join(", ")} — ${scorers[0].goals}` : null,
+    input.mvp ? t("share.mvp", { name: input.mvp }) : null,
+    scorers.length
+      ? t("share.topScorer", { names: scorers.map((s) => s.name).join(", "), goals: scorers[0].goals })
+      : null,
   ].filter((l): l is string => l !== null);
   const byId = new Map(input.teams.map((t) => [t.id, t]));
   const results = input.matches
@@ -114,24 +116,24 @@ export function gameSummaryText(input: {
     .map((m) => `${byId.get(m.team_a_id)?.name} ${m.score_a}:${m.score_b} ${byId.get(m.team_b_id)?.name}`);
   const table = input.standings.map(
     (s, i) =>
-      `${i + 1}. ${teamColor(s.color).emoji} ${s.name} — ${s.points} очк. (${s.goals_for}:${s.goals_against})`,
+      `${i + 1}. ${teamColor(s.color).emoji} ${s.name} — ${t("share.points", { points: s.points })} (${s.goals_for}:${s.goals_against})`,
   );
   return [
-    `⚽ Итоги: ${formatGameDate(input.startsAt, input.timezone)}`,
+    t("share.summaryTitle", { when: formatGameDate(t, input.startsAt, input.timezone) }),
     ...results,
     "",
-    "Таблица:",
+    t("share.table"),
     ...table,
     ...(extras.length ? ["", ...extras] : []),
     "",
-    `Ссылка: ${input.url}`,
+    t("common.link", { url: input.url }),
   ].join("\n");
 }
 
 type BestPlayer = { name: string; goals: number; assists: number; wins: number };
 
 // "🏅 Лучшие игроки: Сб, 4 окт, 19:00\n⭐ Игрок вечера: Иван\n1. Иван — 3 ⚽, 1 🅰️, 2 победы\n…"
-export function bestPlayersText(input: {
+export function bestPlayersText(t: T, input: {
   startsAt: string;
   timezone: string;
   mvp: string | null;
@@ -142,16 +144,16 @@ export function bestPlayersText(input: {
     const parts = [
       p.goals ? `${p.goals} ⚽` : null,
       p.assists ? `${p.assists} 🅰️` : null,
-      p.wins ? `побед: ${p.wins}` : null,
+      p.wins ? t("share.wins", { count: p.wins }) : null,
     ].filter(Boolean);
     return `${i + 1}. ${p.name}${parts.length ? ` — ${parts.join(", ")}` : ""}`;
   };
   return [
-    `🏅 Лучшие игроки: ${formatGameDate(input.startsAt, input.timezone)}`,
-    input.mvp ? `⭐ Игрок вечера: ${input.mvp}` : null,
+    t("share.bestTitle", { when: formatGameDate(t, input.startsAt, input.timezone) }),
+    input.mvp ? t("share.mvp", { name: input.mvp }) : null,
     ...input.players.map(line),
     "",
-    `Ссылка: ${input.url}`,
+    t("common.link", { url: input.url }),
   ]
     .filter((l) => l !== null)
     .join("\n");

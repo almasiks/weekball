@@ -20,14 +20,16 @@ import {
   unlinkPlayerAction,
   type ActionResult,
 } from "@/lib/actions/roster";
-import { POSITIONS, positionLabel } from "@/lib/positions";
+import { POSITION_VALUES, positionLabel } from "@/lib/positions";
 import type { RosterMember } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 type Tab = "regular" | "other" | "archived";
 type Props = { members: RosterMember[]; currentPlayerId: string | null; isOrganizer: boolean };
 
 export function RosterList({ members, currentPlayerId, isOrganizer }: Props) {
+  const t = useT();
   const [tab, setTab] = useState<Tab>("regular");
   const [query, setQuery] = useState("");
   const [menuId, setMenuId] = useState<string | null>(null);
@@ -46,12 +48,12 @@ export function RosterList({ members, currentPlayerId, isOrganizer }: Props) {
   return (
     <div className="flex flex-col gap-3">
       {isOrganizer && (
-        <div className="grid grid-cols-3 gap-1.5" role="tablist" aria-label="Списки">
+        <div className="grid grid-cols-3 gap-1.5" role="tablist" aria-label={t("roster.lists")}>
           {(
             [
-              ["regular", "Состав"],
-              ["other", "Другие"],
-              ["archived", "Архив"],
+              ["regular", t("roster.tabRegular")],
+              ["other", t("roster.tabOther")],
+              ["archived", t("roster.tabArchived")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -75,8 +77,8 @@ export function RosterList({ members, currentPlayerId, isOrganizer }: Props) {
         <div className="relative">
           <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input
-            aria-label="Поиск по имени"
-            placeholder="Поиск по имени"
+            aria-label={t("common.searchByName")}
+            placeholder={t("common.searchByName")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-9"
@@ -86,7 +88,7 @@ export function RosterList({ members, currentPlayerId, isOrganizer }: Props) {
 
       {rows.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted-foreground">
-          {tab === "regular" ? "В составе пока никого. Добавьте игроков списком." : "Пусто."}
+          {tab === "regular" ? t("roster.emptyRegular") : t("roster.empty")}
         </p>
       ) : (
         <ul className="divide-y">
@@ -97,27 +99,27 @@ export function RosterList({ members, currentPlayerId, isOrganizer }: Props) {
                 <div className="flex min-w-0 flex-1 flex-col">
                   <Link href={`/players/${m.playerId}`} className="truncate font-medium underline-offset-2 hover:underline">
                     {m.name}
-                    {m.playerId === currentPlayerId && <span className="text-muted-foreground"> (вы)</span>}
+                    {m.playerId === currentPlayerId && <span className="text-muted-foreground"> {t("common.you")}</span>}
                   </Link>
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                     {m.role === "organizer" && (
                       <Badge variant="secondary" className="w-fit gap-1">
                         <Crown className="size-3" aria-hidden />
-                        Организатор
+                        {t("common.organizer")}
                       </Badge>
                     )}
                     {m.hasAccount && (
                       <span className="inline-flex items-center gap-0.5">
                         <UserCheck className="size-3" aria-hidden />
-                        есть аккаунт
+                        {t("roster.hasAccount")}
                       </span>
                     )}
-                    {m.position && <span>{positionLabel(m.position)}</span>}
-                    {!isOrganizer && <span>ур. {m.level}</span>}
+                    {m.position && <span>{positionLabel(t, m.position)}</span>}
+                    {!isOrganizer && <span>{t("roster.levelShort", { level: m.level })}</span>}
                   </span>
                 </div>
                 {isOrganizer && (
-                  <Button variant="ghost" size="icon" aria-label={`Действия: ${m.name}`} onClick={() => setMenuId(m.playerId)}>
+                  <Button variant="ghost" size="icon" aria-label={t("roster.actions", { name: m.name })} onClick={() => setMenuId(m.playerId)}>
                     <MoreHorizontal aria-hidden />
                   </Button>
                 )}
@@ -154,6 +156,7 @@ function PlayerMenu({
   isMe: boolean;
   onDone: () => void;
 }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(player.name);
@@ -174,7 +177,7 @@ function PlayerMenu({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="rename">Имя</Label>
+        <Label htmlFor="rename">{t("roster.name")}</Label>
         <div className="flex gap-2">
           <Input id="rename" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
           <Button
@@ -182,31 +185,31 @@ function PlayerMenu({
             disabled={pending || !name.trim() || name.trim() === player.name}
             onClick={() => run(() => renamePlayerAction(player.playerId, name))}
           >
-            Сохранить
+            {t("common.save")}
           </Button>
         </div>
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-medium">Позиция</legend>
+        <legend className="mb-2 text-sm font-medium">{t("roster.position")}</legend>
         <div className="grid grid-cols-2 gap-2">
-          {POSITIONS.map((p) => (
+          {POSITION_VALUES.map((value) => (
             <Button
-              key={p.value}
-              variant={player.position === p.value ? "default" : "outline"}
+              key={value}
+              variant={player.position === value ? "default" : "outline"}
               disabled={pending}
-              onClick={() => run(() => setPlayerPositionAction(player.playerId, player.position === p.value ? null : p.value), false)}
+              onClick={() => run(() => setPlayerPositionAction(player.playerId, player.position === value ? null : value), false)}
             >
-              {p.label}
+              {positionLabel(t, value)}
             </Button>
           ))}
         </div>
       </fieldset>
 
       <div className="flex flex-col gap-2 rounded-lg border p-3">
-        <Label htmlFor="merge">Объединить дубль</Label>
+        <Label htmlFor="merge">{t("roster.mergeTitle")}</Label>
         <p className="text-xs text-muted-foreground">
-          Все игры, голы и составы «{player.name}» перейдут к выбранному игроку, а «{player.name}» исчезнет.
+          {t("roster.mergeText", { name: player.name })}
         </p>
         <select
           id="merge"
@@ -217,7 +220,7 @@ function PlayerMenu({
             setConfirmMerge(false);
           }}
         >
-          <option value="">Выберите, с кем объединить</option>
+          <option value="">{t("roster.mergePick")}</option>
           {others.map((o) => (
             <option key={o.playerId} value={o.playerId}>
               {o.name}
@@ -227,18 +230,18 @@ function PlayerMenu({
         {target &&
           (confirmMerge ? (
             <Button variant="destructive" disabled={pending} onClick={() => run(() => mergePlayersAction(player.playerId, target.playerId))}>
-              Да, перенести всё в «{target.name}»
+              {t("roster.mergeConfirm", { name: target.name })}
             </Button>
           ) : (
             <Button variant="outline" onClick={() => setConfirmMerge(true)}>
-              Объединить с «{target.name}»
+              {t("roster.mergeWith", { name: target.name })}
             </Button>
           ))}
       </div>
 
       {player.hasAccount && !isMe && (
         <Button variant="outline" disabled={pending} onClick={() => run(() => unlinkPlayerAction(player.playerId))}>
-          Отвязать аккаунт
+          {t("roster.unlink")}
         </Button>
       )}
       {!isMe && (
@@ -248,7 +251,7 @@ function PlayerMenu({
           disabled={pending}
           onClick={() => run(() => setPlayerArchivedAction(player.playerId, !player.archived))}
         >
-          {player.archived ? "Вернуть в состав" : "В архив (скрыть, статистика сохранится)"}
+          {player.archived ? t("roster.unarchive") : t("roster.archive")}
         </Button>
       )}
       {error && <Notice variant="error">{error}</Notice>}

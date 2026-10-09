@@ -21,6 +21,7 @@ import { formatGameDate } from "@/lib/datetime";
 import { getGamePreview, getGameView } from "@/lib/games";
 import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
+import { getT } from "@/lib/i18n/server";
 
 const organizerTile =
   "flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl bg-card p-2 text-center text-xs font-medium ring-1 ring-foreground/10 hover:bg-muted/60";
@@ -32,15 +33,15 @@ export async function generateMetadata({
   params,
 }: PageProps<"/game/[id]">): Promise<Metadata> {
   const { id } = await params;
-  const preview = await getGamePreview(id);
-  if (!preview) return { title: "Игра" };
+  const [preview, t] = await Promise.all([getGamePreview(id), getT()]);
+  if (!preview) return { title: t("game.metaTitle") };
 
-  const when = formatGameDate(preview.startsAt, preview.timezone);
+  const when = formatGameDate(t, preview.startsAt, preview.timezone);
   const title = `${preview.groupName}: ${when}`;
   const status =
     preview.status === "cancelled"
-      ? "Игра отменена"
-      : `Записано ${preview.goingCount} из ${preview.maxPlayers}`;
+      ? t("status.cancelled")
+      : t("game.ogSigned", { going: preview.goingCount, max: preview.maxPlayers });
   const description = [preview.place, status].filter(Boolean).join(" · ");
 
   return {
@@ -60,23 +61,23 @@ export async function generateMetadata({
 
 export default async function GamePage({ params }: PageProps<"/game/[id]">) {
   const { id } = await params;
-  const ctx = await getAppContext();
+  const [ctx, t] = await Promise.all([getAppContext(), getT()]);
   const view = UUID.test(id) && ctx.userId ? await getGameView(id) : null;
 
   if (!view) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Игра недоступна</CardTitle>
+          <CardTitle className="text-xl">{t("game.unavailableTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Notice>
             {ctx.group
-              ? "Эта игра не найдена или относится к другой группе."
-              : "Чтобы записаться, откройте ссылку-приглашение в группу из чата WhatsApp, а потом эту ссылку ещё раз."}
+              ? t("game.unavailableMember")
+              : t("game.unavailableGuest")}
           </Notice>
           <Link href="/" className={buttonVariants({ variant: "outline" })}>
-            На главную
+            {t("common.home")}
           </Link>
         </CardContent>
       </Card>
@@ -107,7 +108,7 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
         className="-ml-2 flex min-h-11 w-fit items-center gap-1 px-2 text-sm text-muted-foreground"
       >
         <ChevronLeft className="size-4" aria-hidden />
-        На главную
+        {t("common.home")}
       </Link>
       <GamePanel
         view={view}
@@ -116,24 +117,24 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
       />
 
       {isOrganizer && teamsEditable && (
-        <nav aria-label="Организатору" className="grid grid-cols-3 gap-2">
+        <nav aria-label={t("game.organizerNav")} className="grid grid-cols-3 gap-2">
           <Link href={`/game/${id}/checkin`} className={organizerTile}>
             <UserCheck className="size-5" aria-hidden />
-            Отметить пришедших
+            {t("game.checkin")}
           </Link>
           <Link href={`/game/${id}/teams`} className={organizerTile}>
             <Users className="size-5" aria-hidden />
-            {view.teams.length ? "Команды" : "Разделить на команды"}
+            {view.teams.length ? t("game.teams") : t("game.makeTeams")}
           </Link>
           {canRunMatch ? (
             <Link href={`/game/${id}/live`} className={cn(organizerTile, "bg-primary text-primary-foreground hover:bg-primary/90")}>
               <Timer className="size-5" aria-hidden />
-              {view.game.status === "live" ? "Вести матч" : "Матч"}
+              {view.game.status === "live" ? t("game.runMatch") : t("game.match")}
             </Link>
           ) : (
             <span className={cn(organizerTile, "text-muted-foreground opacity-60")} aria-disabled="true">
               <Timer className="size-5" aria-hidden />
-              Матч — после команд
+              {t("game.matchAfterTeams")}
             </span>
           )}
         </nav>
@@ -145,14 +146,14 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
           className={cn(buttonVariants({ variant: "outline" }), "w-full")}
         >
           <Timer aria-hidden />
-          Исправить события
+          {t("game.fixEvents")}
         </Link>
       )}
 
       {isOrganizer && view.game.status === "finished" && !view.game.stats_processed_at && (
         <Notice variant="error">
           <div className="flex flex-col gap-2">
-            <span>Статистика и рейтинги по этой игре не обновлены.</span>
+            <span>{t("game.statsStale")}</span>
             <RecalcButton gameId={view.game.id} />
           </div>
         </Notice>
@@ -161,13 +162,13 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
       {matchData.matches.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">
-            {view.game.status === "finished" ? "Итоги" : "Матчи"}
+            {view.game.status === "finished" ? t("game.results") : t("game.matches")}
           </h2>
           {topScorers.length > 0 && (
             <p className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-sm">
               <span aria-hidden>🏆</span>
               <span>
-                Лучший бомбардир вечера:{" "}
+                {t("game.topScorer")}{" "}
                 {topScorers.map((s, i) => (
                   <span key={s.player_id}>
                     {i > 0 && ", "}
@@ -192,7 +193,7 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
           {matchData.matches.some((m) => m.status === "finished") && (
             <a
               href={whatsappUrl(
-                gameSummaryText({
+                gameSummaryText(t, {
                   startsAt: view.game.starts_at,
                   timezone: view.game.timezone,
                   teams: matchData.teams,
@@ -208,7 +209,7 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
               className={cn(buttonVariants(), "w-full bg-[#075E54] text-white hover:bg-[#064c44]")}
             >
               <MessageCircle aria-hidden />
-              Поделиться итогами
+              {t("game.shareResults")}
             </a>
           )}
         </section>
@@ -217,16 +218,17 @@ export default async function GamePage({ params }: PageProps<"/game/[id]">) {
       {view.game.draft_active && (
         <Link href={`/game/${id}/teams`} className={cn(buttonVariants({ size: "lg" }), "w-full")}>
           <Swords aria-hidden />
-          Идёт драфт — смотреть
+          {t("game.draftRunning")}
         </Link>
       )}
 
 
       {view.game.teams_published_at && view.teams.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">Составы</h2>
+          <h2 className="text-lg font-semibold">{t("game.lineups")}</h2>
           <TeamsList teams={view.teams} userId={ctx.playerId} />
           <ShareTeamsButton
+            t={t}
             startsAt={view.game.starts_at}
             timezone={view.game.timezone}
             url={`${siteUrl}/game/${id}`}

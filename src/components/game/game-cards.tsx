@@ -30,12 +30,14 @@ import {
   updateGameAction,
 } from "@/lib/actions/game-admin";
 import { formatGameDate, utcToZonedInputs } from "@/lib/datetime";
-import { STATUS_LABEL } from "@/lib/game-status";
+import { statusLabel } from "@/lib/game-status";
 import { formatLabel } from "@/lib/match/format";
 import { bestPlayersText, rankBestPlayers, whatsappUrl } from "@/lib/share";
 import type { FormState } from "@/lib/forms";
 import type { GamePlayerStatRow, GameStatus } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
+import type { T } from "@/lib/i18n";
 
 export type GameCardsGame = {
   id: string;
@@ -73,40 +75,41 @@ const tileClass =
 // Dop tep style action cards under the game statistics.
 export function GameCards(props: Props) {
   const { game, stats, isOrganizer } = props;
+  const t = useT();
   const [sheet, setSheet] = useState<Sheet>(null);
   const close = () => setSheet(null);
-  const name = gameName(game);
+  const name = gameName(t, game);
 
   return (
-    <section className="flex flex-col gap-2" aria-label="Действия с игрой">
+    <section className="flex flex-col gap-2" aria-label={t("cards.label")}>
       <div className="grid grid-cols-2 gap-2">
         <button type="button" className={tileClass} onClick={() => setSheet("best")}>
           <Trophy className="size-5 text-amber-500" aria-hidden />
-          Лучшие игроки
+          {t("cards.best")}
         </button>
         <Link href="/history" className={tileClass}>
           <History className="size-5 text-primary" aria-hidden />
-          История игр
+          {t("cards.history")}
         </Link>
         {isOrganizer && (
           <button type="button" className={tileClass} onClick={() => setSheet("edit")}>
             <Pencil className="size-5 text-primary" aria-hidden />
-            Редактировать игру
+            {t("cards.edit")}
           </button>
         )}
         {isOrganizer && (
           <button type="button" className={tileClass} onClick={() => setSheet("reset")}>
             <RotateCcw className="size-5 text-amber-600" aria-hidden />
-            Сбросить результаты
+            {t("cards.reset")}
           </button>
         )}
         <button type="button" className={tileClass} onClick={() => setSheet("info")}>
           <Info className="size-5 text-primary" aria-hidden />
-          Инфо
+          {t("cards.info")}
         </button>
         <Link href="/results" className={tileClass}>
           <CalendarRange className="size-5 text-primary" aria-hidden />
-          Результаты всех игр
+          {t("cards.allResults")}
         </Link>
         {isOrganizer && (
           <button
@@ -115,20 +118,20 @@ export function GameCards(props: Props) {
             onClick={() => setSheet("delete")}
           >
             <Trash2 className="size-5" aria-hidden />
-            Удалить игру
+            {t("cards.delete")}
           </button>
         )}
       </div>
 
-      <BottomSheet open={sheet === "best"} title="Лучшие игроки" onClose={close}>
+      <BottomSheet open={sheet === "best"} title={t("cards.best")} onClose={close}>
         <BestPlayers game={game} stats={stats} isOrganizer={isOrganizer} siteUrl={props.siteUrl} />
       </BottomSheet>
-      <BottomSheet open={sheet === "info"} title="Инфо" onClose={close}>
+      <BottomSheet open={sheet === "info"} title={t("cards.info")} onClose={close}>
         <GameInfo {...props} />
       </BottomSheet>
       {isOrganizer && (
         <>
-          <BottomSheet open={sheet === "edit"} title="Редактировать игру" onClose={close}>
+          <BottomSheet open={sheet === "edit"} title={t("cards.edit")} onClose={close}>
             <EditGameForm
               game={game}
               teamCount={props.teamCount}
@@ -136,19 +139,19 @@ export function GameCards(props: Props) {
               onDone={close}
             />
           </BottomSheet>
-          <BottomSheet open={sheet === "reset"} title="Сбросить результаты?" onClose={close}>
+          <BottomSheet open={sheet === "reset"} title={t("cards.resetTitle")} onClose={close}>
             <ConfirmDanger
-              text={`Все голы и карточки игры «${name}» будут аннулированы, матчи вернутся к 0:0. Составы команд останутся. Статистика и рейтинг пересчитаются.`}
-              confirm="Сбросить результаты"
+              text={t("cards.resetText", { name })}
+              confirm={t("cards.reset")}
               action={() => resetGameResultsAction(game.id)}
               onDone={close}
               onCancel={close}
             />
           </BottomSheet>
-          <BottomSheet open={sheet === "delete"} title="Удалить игру?" onClose={close}>
+          <BottomSheet open={sheet === "delete"} title={t("cards.deleteTitle")} onClose={close}>
             <ConfirmDanger
-              text={`Игра «${name}» исчезнет из списков и статистики, рейтинг пересчитается. Данные не стираются физически.`}
-              confirm="Удалить игру"
+              text={t("cards.deleteText", { name })}
+              confirm={t("cards.delete")}
               action={() => deleteGameAction(game.id)}
               redirectTo="/"
               onDone={close}
@@ -161,8 +164,8 @@ export function GameCards(props: Props) {
   );
 }
 
-function gameName(game: Pick<GameCardsGame, "title" | "startsAt" | "timezone">) {
-  return game.title ?? formatGameDate(game.startsAt, game.timezone);
+function gameName(t: T, game: Pick<GameCardsGame, "title" | "startsAt" | "timezone">) {
+  return game.title ?? formatGameDate(t, game.startsAt, game.timezone);
 }
 
 function BestPlayers({
@@ -176,6 +179,7 @@ function BestPlayers({
   isOrganizer: boolean;
   siteUrl: string;
 }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const best = rankBestPlayers(stats);
@@ -189,7 +193,7 @@ function BestPlayers({
     });
   }
 
-  const text = bestPlayersText({
+  const text = bestPlayersText(t, {
     startsAt: game.startsAt,
     timezone: game.timezone,
     mvp: mvp?.name ?? null,
@@ -202,12 +206,12 @@ function BestPlayers({
       <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2">
         <Star className="size-5 shrink-0 fill-amber-400 text-amber-500" aria-hidden />
         <span className="flex-1 text-sm">
-          Игрок вечера: <strong>{mvp?.name ?? "не выбран"}</strong>
+          {t("cards.mvpLabel")} <strong>{mvp?.name ?? t("cards.mvpNone")}</strong>
         </span>
       </div>
 
       {best.length === 0 ? (
-        <p className="py-2 text-sm text-muted-foreground">Пока нет голов, ассистов и побед.</p>
+        <p className="py-2 text-sm text-muted-foreground">{t("cards.bestEmpty")}</p>
       ) : (
         <ol className="flex flex-col divide-y">
           {best.map((p, i) => (
@@ -215,7 +219,7 @@ function BestPlayers({
               <span className="w-5 text-right text-sm text-muted-foreground tabular-nums">{i + 1}</span>
               <span className="min-w-0 flex-1 truncate">{p.name}</span>
               <span className="text-sm tabular-nums text-muted-foreground">
-                {p.goals} ⚽ · {p.assists} 🅰️ · {p.wins} В
+                {p.goals} ⚽ · {p.assists} 🅰️ · {p.wins} {t("gameStats.col.wins.short")}
               </span>
             </li>
           ))}
@@ -224,7 +228,7 @@ function BestPlayers({
 
       {isOrganizer && stats.length > 0 && (
         <div className="flex flex-col gap-2">
-          <Label htmlFor="mvp-select">Выбрать игрока вечера</Label>
+          <Label htmlFor="mvp-select">{t("cards.pickMvp")}</Label>
           <select
             id="mvp-select"
             value={game.mvpId ?? ""}
@@ -232,7 +236,7 @@ function BestPlayers({
             onChange={(e) => pickMvp(e.target.value || null)}
             className="h-11 rounded-lg border bg-background px-3 text-base"
           >
-            <option value="">— не выбран —</option>
+            <option value="">{t("cards.mvpNoneOption")}</option>
             {[...stats]
               .sort((a, b) => a.name.localeCompare(b.name, "ru"))
               .map((s) => (
@@ -253,7 +257,7 @@ function BestPlayers({
           className={cn(buttonVariants(), "w-full bg-[#075E54] text-white hover:bg-[#064c44]")}
         >
           <MessageCircle aria-hidden />
-          Поделиться в WhatsApp
+          {t("common.shareWhatsapp")}
         </a>
       )}
     </>
@@ -261,6 +265,7 @@ function BestPlayers({
 }
 
 function GameInfo({ game, isOrganizer, goingCount, presentCount, teamCount, creatorName, siteUrl }: Props) {
+  const t = useT();
   const [token, setToken] = useState(game.liveToken);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -283,24 +288,24 @@ function GameInfo({ game, isOrganizer, goingCount, presentCount, teamCount, crea
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError("Не удалось скопировать — выделите ссылку вручную.");
+      setError(t("cards.copyFailed"));
     }
   }
 
   const rows: [string, string][] = [
-    ["Название", game.title ?? "—"],
-    ["Когда", formatGameDate(game.startsAt, game.timezone)],
-    ["Где", game.place || "—"],
-    ["Статус", STATUS_LABEL[game.status]],
-    ["Записано", `${goingCount} из ${game.maxPlayers}`],
-    ["Пришло", String(presentCount)],
-    ["Команд", String(teamCount)],
+    [t("cards.rowTitle"), game.title ?? "—"],
+    [t("cards.rowWhen"), formatGameDate(t, game.startsAt, game.timezone)],
+    [t("cards.rowWhere"), game.place || "—"],
+    [t("cards.rowStatus"), statusLabel(t, game.status)],
+    [t("cards.rowSigned"), t("cards.signedOf", { going: goingCount, max: game.maxPlayers })],
+    [t("cards.rowCame"), String(presentCount)],
+    [t("cards.rowTeams"), String(teamCount)],
     [
-      "Формат",
-      `${formatLabel(game.goalLimit, game.matchMinutes)}${game.periods > 1 ? ` × ${game.periods} тайма` : ""}`,
+      t("cards.rowFormat"),
+      `${formatLabel(t, game.goalLimit, game.matchMinutes)}${game.periods > 1 ? ` ${t("cards.periodsTimes", { count: game.periods })}` : ""}`,
     ],
-    ["Автозвуки", game.autoSounds ? "вкл." : "выкл."],
-    ["Создал", creatorName ?? "—"],
+    [t("cards.rowAutoSounds"), game.autoSounds ? t("cards.on") : t("cards.off")],
+    [t("cards.rowCreator"), creatorName ?? "—"],
   ];
 
   return (
@@ -315,20 +320,20 @@ function GameInfo({ game, isOrganizer, goingCount, presentCount, teamCount, crea
       </dl>
 
       <div className="mt-2 flex flex-col gap-2 rounded-lg border p-3">
-        <p className="text-sm font-medium">Публичная live-ссылка</p>
+        <p className="text-sm font-medium">{t("cards.liveTitle")}</p>
         <p className="text-xs text-muted-foreground">
-          Гости без входа видят счёт, таймер и составы (только имена).
+          {t("cards.liveText")}
         </p>
         {liveUrl ? (
           <>
-            <Input readOnly value={liveUrl} aria-label="Live-ссылка" onFocus={(e) => e.target.select()} />
+            <Input readOnly value={liveUrl} aria-label={t("cards.liveLabel")} onFocus={(e) => e.target.select()} />
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" onClick={copy}>
                 <Copy aria-hidden />
-                {copied ? "Скопировано" : "Скопировать"}
+                {copied ? t("cards.copied") : t("cards.copy")}
               </Button>
               <a
-                href={whatsappUrl(`⚽ Смотреть игру онлайн: ${liveUrl}`)}
+                href={whatsappUrl(t("share.watchLive", { url: liveUrl }))}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(buttonVariants(), "bg-[#075E54] text-white hover:bg-[#064c44]")}
@@ -339,16 +344,16 @@ function GameInfo({ game, isOrganizer, goingCount, presentCount, teamCount, crea
             </div>
             {isOrganizer && (
               <Button variant="ghost" disabled={pending} onClick={() => toggleLive(false)}>
-                Выключить ссылку
+                {t("cards.liveOff")}
               </Button>
             )}
           </>
         ) : isOrganizer ? (
           <Button variant="secondary" disabled={pending} onClick={() => toggleLive(true)}>
-            Включить live-ссылку
+            {t("cards.liveOn")}
           </Button>
         ) : (
-          <p className="text-sm text-muted-foreground">Организатор ещё не включил ссылку.</p>
+          <p className="text-sm text-muted-foreground">{t("cards.liveNotEnabled")}</p>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
@@ -367,6 +372,7 @@ function EditGameForm({
   teamsEditable: boolean;
   onDone: () => void;
 }) {
+  const t = useT();
   const initial = utcToZonedInputs(game.startsAt, game.timezone);
   // null = not chosen: saving other fields must not create teams by itself.
   const [count, setCount] = useState<number | null>(teamCount >= 2 ? teamCount : null);
@@ -384,27 +390,27 @@ function EditGameForm({
       <input type="hidden" name="teamCountChanged" value={count !== null && count !== teamCount ? "1" : "0"} />
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="edit-title">Название (необязательно)</Label>
-        <Input id="edit-title" name="title" maxLength={60} defaultValue={game.title ?? ""} placeholder="Например, Кубок октября" />
+        <Label htmlFor="edit-title">{t("cards.titleOptional")}</Label>
+        <Input id="edit-title" name="title" maxLength={60} defaultValue={game.title ?? ""} placeholder={t("cards.titlePlaceholder")} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="edit-date">Дата</Label>
+          <Label htmlFor="edit-date">{t("schedule.date")}</Label>
           <Input id="edit-date" name="date" type="date" required defaultValue={initial.date} />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="edit-time">Время</Label>
+          <Label htmlFor="edit-time">{t("schedule.time")}</Label>
           <Input id="edit-time" name="time" type="time" required defaultValue={initial.time} />
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="edit-place">Место</Label>
+        <Label htmlFor="edit-place">{t("schedule.place")}</Label>
         <Input id="edit-place" name="place" maxLength={120} defaultValue={game.place} />
       </div>
 
       {teamsEditable && (
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-sm font-medium">Количество команд</legend>
+          <legend className="mb-2 text-sm font-medium">{t("cards.teamCount")}</legend>
           <div className="grid grid-cols-2 gap-2">
             {[2, 3].map((n) => (
               <Button
@@ -414,7 +420,7 @@ function EditGameForm({
                 aria-pressed={count === n}
                 onClick={() => setCount(n)}
               >
-                {n} команды
+                {t("game.teamsCount", { count: n })}
               </Button>
             ))}
           </div>
@@ -423,7 +429,7 @@ function EditGameForm({
 
       <FormatFields idPrefix="edit-format" goalLimit={game.goalLimit} matchMinutes={game.matchMinutes} />
       <div className="flex flex-col gap-2">
-        <Label htmlFor="edit-periods">Таймов в матче</Label>
+        <Label htmlFor="edit-periods">{t("cards.periods")}</Label>
         <select
           id="edit-periods"
           name="periods"
@@ -436,15 +442,15 @@ function EditGameForm({
             </option>
           ))}
         </select>
-        <p className="text-xs text-muted-foreground">Длительность выше — это один тайм.</p>
+        <p className="text-xs text-muted-foreground">{t("cards.periodsHint")}</p>
       </div>
       <label className="flex min-h-11 items-center gap-2 text-sm">
         <input type="checkbox" name="autoSounds" defaultChecked={game.autoSounds} className="size-5 accent-primary" />
-        Автозвуки: «Минута!» и финальный свисток
+        {t("cards.autoSounds")}
       </label>
 
       {state.error && <Notice variant="error">{state.error}</Notice>}
-      <SubmitButton pendingText="Сохраняем…">Сохранить</SubmitButton>
+      <SubmitButton pendingText={t("common.saving")}>{t("common.save")}</SubmitButton>
     </form>
   );
 }
@@ -464,6 +470,7 @@ function ConfirmDanger({
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -488,10 +495,10 @@ function ConfirmDanger({
       {error && <Notice variant="error">{error}</Notice>}
       <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" onClick={onCancel} disabled={pending}>
-          Отмена
+          {t("cards.cancel")}
         </Button>
         <Button variant="destructive" onClick={run} disabled={pending}>
-          {pending ? "Подождите…" : confirm}
+          {pending ? t("cards.wait") : confirm}
         </Button>
       </div>
     </>

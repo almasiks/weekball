@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { MemberRole, PlayerPosition } from "@/lib/supabase/database.types";
+import { getT } from "@/lib/i18n/server";
 
 export type AppContext = {
   // Auth account (may exist without a player yet).
@@ -73,7 +74,7 @@ export type RosterMember = {
 };
 
 export async function getGroupMembers(groupId: string): Promise<RosterMember[]> {
-  const supabase = await createClient();
+  const [supabase, t] = await Promise.all([createClient(), getT()]);
   const { data, error } = await supabase
     .from("group_members")
     .select("player_id, role, players(name, level, position, user_id, is_regular, archived_at)")
@@ -84,7 +85,7 @@ export async function getGroupMembers(groupId: string): Promise<RosterMember[]> 
     .map((row) => ({
       playerId: row.player_id,
       role: row.role,
-      name: row.players?.name ?? "Без имени",
+      name: row.players?.name ?? t("common.unnamed"),
       level: row.players?.level ?? 3,
       position: row.players?.position ?? null,
       hasAccount: !!row.players?.user_id,

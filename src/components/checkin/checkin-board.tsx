@@ -10,6 +10,7 @@ import { BottomSheet } from "@/components/bottom-sheet";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { useOutbox } from "@/lib/match/use-outbox";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 export type CheckinPlayer = {
   playerId: string;
@@ -26,6 +27,7 @@ const clock = () => Date.now();
 // Big checkboxes "кто пришёл". Works offline: every tap goes to the outbox
 // (idempotent RPCs) and the list is updated optimistically.
 export function CheckinBoard({ gameId, players }: Props) {
+  const t = useT();
   const router = useRouter();
   const refresh = useCallback(() => {
     if (navigator.onLine) router.refresh();
@@ -117,7 +119,7 @@ export function CheckinBoard({ gameId, players }: Props) {
         </span>
         <PlayerAvatar name={p.name} className="size-8 text-sm" />
         <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
-        {!p.isRegular && <span className="text-xs text-muted-foreground">разовый</span>}
+        {!p.isRegular && <span className="text-xs text-muted-foreground">{t("checkin.oneOff")}</span>}
       </button>
     </li>
   );
@@ -129,7 +131,8 @@ export function CheckinBoard({ gameId, players }: Props) {
         className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-10 flex items-center gap-3 rounded-xl bg-background/95 py-2 backdrop-blur"
       >
         <span className="text-2xl font-bold tabular-nums">
-          Пришло {presentCount} <span className="text-base font-medium text-muted-foreground">из {total}</span>
+          {t("checkin.came", { count: presentCount })}{" "}
+          <span className="text-base font-medium text-muted-foreground">{t("checkin.ofTotal", { total })}</span>
         </span>
         <span
           className={cn(
@@ -138,15 +141,15 @@ export function CheckinBoard({ gameId, players }: Props) {
           )}
         >
           {outbox.pending.length ? <CloudOff className="size-4" aria-hidden /> : <CircleCheck className="size-4" aria-hidden />}
-          {outbox.pending.length ? `не отправлено: ${outbox.pending.length}` : "сохранено"}
+          {outbox.pending.length ? t("checkin.unsent", { count: outbox.pending.length }) : t("checkin.saved")}
         </span>
       </div>
 
       <div className="relative">
         <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
         <Input
-          aria-label="Поиск по имени"
-          placeholder="Поиск по имени (и разовые игроки)"
+          aria-label={t("common.searchByName")}
+          placeholder={t("checkin.searchPlaceholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="pl-9"
@@ -155,42 +158,42 @@ export function CheckinBoard({ gameId, players }: Props) {
 
       <Button size="lg" variant="secondary" onClick={() => setAdding(true)}>
         <UserPlus aria-hidden />
-        Добавить нового игрока
+        {t("checkin.addNew")}
       </Button>
 
       {signed.length > 0 && (
         <section className="flex flex-col gap-1.5">
-          <h2 className="text-sm font-medium text-muted-foreground">Записались «Иду» · {signed.length}</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">{t("checkin.signedUp", { count: signed.length })}</h2>
           <ul className="flex flex-col gap-1.5">{signed.map(row)}</ul>
         </section>
       )}
       {rest.length > 0 && (
         <section className="flex flex-col gap-1.5">
-          <h2 className="text-sm font-medium text-muted-foreground">Постоянный состав · {rest.length}</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">{t("checkin.regulars", { count: rest.length })}</h2>
           <ul className="flex flex-col gap-1.5">{rest.map(row)}</ul>
         </section>
       )}
       {others.length > 0 && (
         <section className="flex flex-col gap-1.5">
-          <h2 className="text-sm font-medium text-muted-foreground">Другие</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">{t("checkin.others")}</h2>
           <ul className="flex flex-col gap-1.5">{others.map(row)}</ul>
         </section>
       )}
       {signed.length + rest.length + others.length === 0 && (
         <p className="py-4 text-center text-sm text-muted-foreground">
-          {q ? "Никого не нашли — добавьте нового игрока." : "Состав пуст — добавьте игроков в «Составе»."}
+          {q ? t("checkin.notFound") : t("checkin.emptyRoster")}
         </p>
       )}
 
       {outbox.rejected.map((item) => (
         <p key={item.id} className="text-sm text-destructive">
-          Не принято сервером: {item.error}
+          {t("checkin.rejected", { error: item.error ?? "" })}
         </p>
       ))}
 
-      <BottomSheet open={adding} title="Новый игрок" onClose={() => setAdding(false)}>
+      <BottomSheet open={adding} title={t("checkin.newPlayer")} onClose={() => setAdding(false)}>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="new-player">Имя</Label>
+          <Label htmlFor="new-player">{t("checkin.name")}</Label>
           <Input
             id="new-player"
             value={newName}
@@ -207,10 +210,10 @@ export function CheckinBoard({ gameId, players }: Props) {
             onChange={(e) => setRegular(e.target.checked)}
             className="size-5 accent-primary"
           />
-          Добавить в постоянный состав
+          {t("checkin.addToRoster")}
         </label>
         <Button size="lg" disabled={!newName.trim()} onClick={addPlayer}>
-          Добавить и отметить
+          {t("checkin.addAndMark")}
         </Button>
       </BottomSheet>
     </div>

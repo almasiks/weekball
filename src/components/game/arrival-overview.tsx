@@ -1,8 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SignupEntry } from "@/lib/games";
+import { getT } from "@/lib/i18n/server";
 
 // Organizer view: who is on the pitch, who is late, who hasn't checked in.
-export function ArrivalOverview({ going }: { going: SignupEntry[] }) {
+export async function ArrivalOverview({ going }: { going: SignupEntry[] }) {
+  const t = await getT();
   const arrived = going.filter((s) => s.arrival === "arrived");
   const late = going
     .filter((s) => s.arrival === "late")
@@ -10,23 +12,23 @@ export function ArrivalOverview({ going }: { going: SignupEntry[] }) {
   const pending = going.filter((s) => s.arrival === "pending");
 
   const groups = [
-    { title: "На месте", items: arrived.map((s) => s.name), tone: "text-primary" },
+    { title: t("arrival.onPitch"), items: arrived.map((s) => s.name), tone: "text-primary" },
     {
-      title: "Опаздывают",
-      items: late.map((s) => `${s.name} — на ${s.lateMinutes} мин`),
+      title: t("arrival.lateGroup"),
+      items: late.map((s) => t("arrival.lateItem", { name: s.name, minutes: s.lateMinutes ?? 0 })),
       tone: "text-amber-700 dark:text-amber-400",
     },
-    { title: "Ещё не отметились", items: pending.map((s) => s.name), tone: "text-muted-foreground" },
+    { title: t("arrival.notMarked"), items: pending.map((s) => s.name), tone: "text-muted-foreground" },
   ];
 
   return (
     <Card size="sm">
       <CardHeader>
-        <CardTitle>Прибытие</CardTitle>
+        <CardTitle>{t("arrival.overview")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {going.length === 0 ? (
-          <p className="text-sm text-muted-foreground">В составе пока никого нет.</p>
+          <p className="text-sm text-muted-foreground">{t("arrival.empty")}</p>
         ) : (
           groups.map((g) => (
             <div key={g.title}>

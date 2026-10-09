@@ -12,28 +12,28 @@ import { JoinGroupForm } from "@/components/join-group-form";
 import { Notice } from "@/components/notice";
 import { getAppContext } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Приглашение" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("join.metaTitle") };
+}
 
 const CODE_PATTERN = /^[A-Za-z0-9]{4,16}$/;
 
 export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
   const { code } = await params;
-  const ctx = await getAppContext();
+  const [ctx, t] = await Promise.all([getAppContext(), getT()]);
 
   if (!CODE_PATTERN.test(code)) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Ссылка не работает</CardTitle>
+          <CardTitle className="text-xl">{t("join.brokenTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Notice variant="error">
-            Ссылка-приглашение повреждена. Попросите организатора прислать её
-            ещё раз.
-          </Notice>
+          <Notice variant="error">{t("join.brokenText")}</Notice>
           <Link href="/" className={buttonVariants({ variant: "outline" })}>
-            На главную
+            {t("common.home")}
           </Link>
         </CardContent>
       </Card>
@@ -50,11 +50,11 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Вас пригласили в группу</CardTitle>
+        <CardTitle className="text-xl">{t("join.title")}</CardTitle>
         <CardDescription>
           {claimable?.length
-            ? "Найдите себя в списке — вся ваша статистика сохранится. Пароль не нужен."
-            : "Введите имя — так вас увидят в списке игроков и составах. Пароль не нужен."}
+            ? t("join.textPick")
+            : t("join.textNew")}
         </CardDescription>
       </CardHeader>
       <CardContent>

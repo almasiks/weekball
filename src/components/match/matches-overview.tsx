@@ -8,6 +8,7 @@ import { Scoreboard } from "@/components/match/scoreboard";
 import { StandingsTable } from "@/components/match/standings-table";
 import { useServerOffset } from "@/lib/match/hooks";
 import type { LiveEvent, LiveMatch, LiveTeam, StandingRow } from "@/lib/match/types";
+import { useT } from "@/lib/i18n/client";
 
 type Props = {
   matches: LiveMatch[];
@@ -24,6 +25,7 @@ type Props = {
 };
 
 export function MatchesOverview(props: Props) {
+  const tr = useT();
   const measured = useServerOffset();
   const offset = props.offset ?? measured ?? 0;
   const { matches, events, teams, names, standings, matchHrefBase } = props;
@@ -44,7 +46,7 @@ export function MatchesOverview(props: Props) {
           <Card key={m.id} size="sm">
             <CardContent>
               {matchHrefBase ? (
-                <Link href={`${matchHrefBase}${m.id}`} className="relative block" aria-label="Подробнее о матче">
+                <Link href={`${matchHrefBase}${m.id}`} className="relative block" aria-label={tr("match.more")}>
                   {board}
                   <ChevronRight className="absolute top-1/2 right-0 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
                 </Link>
@@ -58,7 +60,7 @@ export function MatchesOverview(props: Props) {
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>{props.finished ? "Итоговая таблица" : "Таблица вечера"}</CardTitle>
+          <CardTitle>{props.finished ? tr("match.finalTable") : tr("match.eveningTable")}</CardTitle>
         </CardHeader>
         <CardContent>
           <StandingsTable rows={standings} />
@@ -67,7 +69,7 @@ export function MatchesOverview(props: Props) {
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>События</CardTitle>
+          <CardTitle>{tr("match.events")}</CardTitle>
         </CardHeader>
         <CardContent>
           <EventFeed events={events} matches={matches} teams={teams} names={names} />

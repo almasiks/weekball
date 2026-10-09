@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getGameView } from "@/lib/games";
-import { errorMessage, toMessage } from "@/lib/errors";
+import { errorMessage, getT, toMessage } from "@/lib/i18n/server";
 import { balanceTeams } from "@/lib/teams/balance";
-import { nextFreeColor, teamColor } from "@/lib/teams/colors";
+import { defaultTeamName, nextFreeColor } from "@/lib/teams/colors";
 import { playerStrength } from "@/lib/teams/strength";
 
 export type ActionResult = { error?: string };
@@ -21,7 +21,7 @@ async function rpcResult(
   call: PromiseLike<{ error: { message?: string } | null }>,
 ): Promise<ActionResult> {
   const { error } = await call;
-  if (error) return { error: toMessage(error) };
+  if (error) return { error: await toMessage(error) };
   revalidateTeams(gameId);
   return {};
 }
@@ -29,9 +29,10 @@ async function rpcResult(
 // --- Team setup ---
 
 export async function setTeamCountAction(gameId: string, count: number): Promise<ActionResult> {
-  if (count !== 2 && count !== 3) return { error: "Можно 2 или 3 команды." };
+  const t = await getT();
+  if (count !== 2 && count !== 3) return { error: t("teams.error.count") };
   const view = await getGameView(gameId);
-  if (!view) return { error: errorMessage("game_not_found") };
+  if (!view) return { error: await errorMessage("game_not_found") };
 
   const supabase = await createClient();
   const teams = view.teams;
@@ -40,20 +41,20 @@ export async function setTeamCountAction(gameId: string, count: number): Promise
     const used = teams.map((t) => t.team.color);
     for (let i = teams.length; i < count; i++) {
       const color = nextFreeColor(used);
-      if (!color) return { error: "Закончились свободные цвета." };
+      if (!color) return { error: t("teams.error.noColors") };
       used.push(color.hex);
       const { error } = await supabase.rpc("create_team", {
         p_game_id: gameId,
-        p_name: color.teamName,
+        p_name: defaultTeamName(t, color.hex),
         p_color: color.hex,
       });
-      if (error) return { error: toMessage(error) };
+      if (error) return { error: await toMessage(error) };
     }
   } else {
     // Remove the last teams; their players go back to "unassigned".
     for (const t of teams.slice(count).reverse()) {
       const { error } = await supabase.rpc("delete_team", { p_team_id: t.team.id });
-      if (error) return { error: toMessage(error) };
+      if (error) return { error: await toMessage(error) };
     }
   }
 
@@ -66,7 +67,7 @@ export async function updateTeamAction(
   teamId: string,
   input: { name: string; color: string; captainId: string | null },
 ): Promise<ActionResult> {
-  const name = input.name.trim() || teamColor(input.color).teamName;
+  const name = input.name.trim() || defaultTeamName(await getT(), input.color);
   const supabase = await createClient();
   return rpcResult(
     gameId,
@@ -93,9 +94,10 @@ export async function autoBuildAction(
   presentOnly = false,
 ): Promise<ActionResult> {
   const view = await getGameView(gameId);
-  if (!view) return { error: errorMessage("game_not_found") };
-  if (view.teams.length < 2) return { error: "Сначала создайте 2 или 3 команды." };
-  if (view.going.length === 0) return { error: "На игру пока никто не записан." };
+  if (!view) return { error: await errorMessage("game_not_found") };
+  const t = await getT();
+  if (view.teams.length < 2) return { error: t("teams.error.needTeams") };
+  if (view.going.length === 0) return { error: t("teams.error.nobodySigned") };
 
   const teamIds = view.teams.map((t) => t.team.id);
   const locked: Record<string, number> = {};
@@ -108,7 +110,7 @@ export async function autoBuildAction(
   const pool = presentOnly
     ? view.going.filter((p) => p.arrival === "arrived" || lockedIds.has(p.playerId))
     : view.going;
-  if (pool.length === 0) return { error: "Сначала отметьте, кто пришёл." };
+  if (pool.length === 0) return { error: t("teams.error.markFirst") };
   const players = pool.map((p) => ({
     id: p.playerId,
     position: p.position,
@@ -146,7 +148,7 @@ export async function movePlayerAction(
 // Late arrival: smallest team; on a tie, the weaker team (by playerStrength) first.
 export async function addLatePlayerAction(gameId: string, playerId: string): Promise<ActionResult> {
   const view = await getGameView(gameId);
-  if (!view) return { error: errorMessage("game_not_found") };
+  if (!view) return { error: await errorMessage("game_not_found") };
   const order = [...view.teams]
     .sort((a, b) => a.strength - b.strength)
     .map((t) => t.team.id);
@@ -212,7 +214,7 @@ export async function setPlayerLevelAction(playerId: string, level: number): Pro
     p_player_id: playerId,
     p_level: level,
   });
-  if (error) return { error: toMessage(error) };
+  if (error) return { error: await toMessage(error) };
   revalidatePath("/roster");
   return {};
 }

@@ -5,6 +5,7 @@ import { Clock, MapPinCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { setArrivalAction } from "@/lib/actions/games";
 import type { ArrivalStatus } from "@/lib/supabase/database.types";
+import { useT } from "@/lib/i18n/client";
 
 const LATE_OPTIONS = [5, 10, 15, 30];
 
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export function ArrivalControls({ gameId, arrival, lateMinutes }: Props) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [pickingLate, setPickingLate] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,12 +37,12 @@ export function ArrivalControls({ gameId, arrival, lateMinutes }: Props) {
     >
       <div className="flex items-center justify-between gap-2">
         <h2 id={`arrival-${gameId}`} className="font-medium">
-          Я в пути
+          {t("arrival.title")}
         </h2>
         <span className="text-sm text-muted-foreground">
-          {arrival === "arrived" && "Вы на месте"}
-          {arrival === "late" && `Опаздываете на ${lateMinutes} мин`}
-          {arrival === "pending" && "Ещё не отметились"}
+          {arrival === "arrived" && t("arrival.youArrived")}
+          {arrival === "late" && t("arrival.youLate", { minutes: lateMinutes ?? 0 })}
+          {arrival === "pending" && t("arrival.notMarked")}
         </span>
       </div>
 
@@ -52,7 +54,7 @@ export function ArrivalControls({ gameId, arrival, lateMinutes }: Props) {
           onClick={() => setPickingLate((v) => !v)}
         >
           <Clock aria-hidden />
-          Опаздываю
+          {t("arrival.late")}
         </Button>
         <Button
           variant={arrival === "arrived" ? "default" : "outline"}
@@ -61,13 +63,13 @@ export function ArrivalControls({ gameId, arrival, lateMinutes }: Props) {
           onClick={() => submit("arrived")}
         >
           <MapPinCheck aria-hidden />
-          Я на месте
+          {t("arrival.here")}
         </Button>
       </div>
 
       {pickingLate && (
         <div className="flex flex-col gap-2">
-          <p className="text-sm text-muted-foreground">На сколько минут?</p>
+          <p className="text-sm text-muted-foreground">{t("arrival.howLate")}</p>
           <div className="grid grid-cols-4 gap-2">
             {LATE_OPTIONS.map((minutes) => (
               <Button
@@ -94,7 +96,7 @@ export function ArrivalControls({ gameId, arrival, lateMinutes }: Props) {
           disabled={pending}
           onClick={() => submit("pending")}
         >
-          Сбросить отметку
+          {t("arrival.reset")}
         </Button>
       )}
 

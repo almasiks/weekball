@@ -4,13 +4,15 @@
 // button while something plays restarts instead of layering.
 // - custom files: decoded once into AudioBuffers (bytes cached in IndexedDB → work offline);
 // - whistles: synthesized with Web Audio;
-// - voice phrases: speechSynthesis (ru-RU) as the built-in fallback.
+// - voice phrases: speechSynthesis in the interface language (Russian when the phone has no such voice).
 import { get, set } from "idb-keyval";
 import { WHISTLE_PATTERNS, type BuiltinSound } from "./builtin";
 
 export type PlayableSound = {
   key: string; // builtin key or sound id
   builtin?: BuiltinSound;
+  // Translated phrase for voice buttons; without it the Russian original is spoken.
+  speech?: { text: string; lang: string };
   filePath?: string | null; // Storage path; wins over the built-in sound when loaded
 };
 
@@ -133,7 +135,9 @@ class SoundEngine {
     if (this.muted) return;
 
     if (source === "file") return this.playFile(sound.filePath!);
-    if (sound.builtin?.kind === "speech") return this.speak(sound.builtin.text ?? sound.builtin.label);
+    if (sound.builtin?.kind === "speech") {
+      return this.speak(sound.builtin.text ?? sound.builtin.label, sound.speech);
+    }
     if (sound.builtin?.kind === "whistle") return this.whistle(WHISTLE_PATTERNS[sound.builtin.pattern ?? "short"]);
   }
 
@@ -157,15 +161,20 @@ class SoundEngine {
     };
   }
 
-  private speak(text: string) {
+  // `russian` is always available as text; `translated` is used when the phone has a voice for it
+  // (Kazakh voices are rare: better a clear Russian phrase than Kazakh read by a wrong voice).
+  private speak(russian: string, translated?: { text: string; lang: string }) {
     if (!("speechSynthesis" in window)) return this.beep();
     const synth = window.speechSynthesis;
     synth.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "ru-RU";
+    const voices = synth.getVoices();
+    const voiceFor = (lang: string) => voices.find((v) => v.lang.toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
+    const own = translated && !translated.lang.toLowerCase().startsWith("ru") ? voiceFor(translated.lang) : undefined;
+    const utterance = new SpeechSynthesisUtterance(own ? translated!.text : russian);
+    utterance.lang = own ? translated!.lang : "ru-RU";
     utterance.rate = 1.05;
     utterance.volume = this.volume;
-    const voice = synth.getVoices().find((v) => v.lang.toLowerCase().startsWith("ru"));
+    const voice = own ?? voiceFor("ru");
     if (voice) utterance.voice = voice;
     synth.speak(utterance);
     this.current = { stop: () => synth.cancel() };

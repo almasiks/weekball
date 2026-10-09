@@ -2,15 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { toMessage } from "@/lib/errors";
+import { getT, toMessage } from "@/lib/i18n/server";
 import { recalcGroupRatings } from "@/lib/rating/recalc";
 import { getAppContext } from "@/lib/session";
 import type { PlayerPosition } from "@/lib/supabase/database.types";
 
 export type ActionResult = { error?: string };
 
-function done(error: { message?: string } | null): ActionResult {
-  if (error) return { error: toMessage(error) };
+async function done(error: { message?: string } | null): Promise<ActionResult> {
+  if (error) return { error: await toMessage(error) };
   revalidatePath("/roster");
   revalidatePath("/", "layout");
   return {};
@@ -26,13 +26,14 @@ function parseNames(text: string): string[] {
 
 export async function addPlayersAction(groupId: string, text: string): Promise<ActionResult & { added?: number }> {
   const names = parseNames(text);
-  if (names.length === 0) return { error: "Вставьте хотя бы одно имя." };
-  if (names.length > 100) return { error: "Не больше 100 имён за раз." };
-  if (names.some((n) => n.length > 40)) return { error: "Имя — не длиннее 40 символов." };
+  const t = await getT();
+  if (names.length === 0) return { error: t("roster.error.needOne") };
+  if (names.length > 100) return { error: t("roster.error.tooMany") };
+  if (names.some((n) => n.length > 40)) return { error: t("roster.error.nameLong") };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("add_players", { p_group_id: groupId, p_names: names });
-  if (error) return { error: toMessage(error) };
-  done(null);
+  if (error) return { error: await toMessage(error) };
+  await done(null);
   return { added: data?.length ?? 0 };
 }
 
@@ -67,7 +68,7 @@ export async function unlinkPlayerAction(playerId: string): Promise<ActionResult
 export async function mergePlayersAction(fromId: string, toId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("merge_players", { p_from: fromId, p_to: toId });
-  if (error) return { error: toMessage(error) };
+  if (error) return { error: await toMessage(error) };
   const ctx = await getAppContext();
   if (ctx.group) await recalcGroupRatings(supabase, ctx.group.id).catch(() => null);
   return done(null);

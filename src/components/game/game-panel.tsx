@@ -11,8 +11,10 @@ import { SignupButtons } from "@/components/game/signup-buttons";
 import { formatGameDate } from "@/lib/datetime";
 import { gameShareText, whatsappUrl } from "@/lib/share";
 import type { GameView, SignupEntry } from "@/lib/games";
-import { STATUS_LABEL } from "@/lib/game-status";
+import { statusLabel } from "@/lib/game-status";
 import { cn } from "@/lib/utils";
+import { getT } from "@/lib/i18n/server";
+import type { T } from "@/lib/i18n";
 
 type Props = {
   view: GameView;
@@ -22,7 +24,8 @@ type Props = {
   linkToGame?: boolean;
 };
 
-export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
+export async function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
+  const t = await getT();
   const { game, going, waitlist } = view;
   const all = [...going, ...waitlist, ...view.declined];
   const me = all.find((s) => s.playerId === userId) ?? null;
@@ -36,7 +39,7 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
     : undefined;
   const fill =Math.min(100, Math.round((going.length / game.max_players) * 100));
 
-  const shareText = gameShareText({
+  const shareText = gameShareText(t, {
     startsAt: game.starts_at,
     timezone: game.timezone,
     place: game.place,
@@ -50,7 +53,7 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
     <span className="flex flex-col">
       {game.title && <span className="text-sm font-medium text-muted-foreground">{game.title}</span>}
       <span className="text-xl font-semibold tracking-tight">
-        {formatGameDate(game.starts_at, game.timezone)}
+        {formatGameDate(t, game.starts_at, game.timezone)}
       </span>
     </span>
   );
@@ -75,7 +78,7 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
             variant={game.status === "cancelled" ? "destructive" : "secondary"}
             className="mt-1 shrink-0"
           >
-            {STATUS_LABEL[game.status]}
+            {statusLabel(t, game.status)}
           </Badge>
         </div>
         {game.place && (
@@ -90,12 +93,12 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between text-sm">
             <span>
-              Записано <strong className="text-base">{going.length}</strong> из{" "}
+              {t("game.signed")} <strong className="text-base">{going.length}</strong> {t("game.of")}{" "}
               {game.max_players}
             </span>
             {waitlist.length > 0 && (
               <span className="text-muted-foreground">
-                в очереди: {waitlist.length}
+                {t("game.inQueue", { count: waitlist.length })}
               </span>
             )}
           </div>
@@ -105,7 +108,7 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
             aria-valuemin={0}
             aria-valuemax={game.max_players}
             aria-valuenow={going.length}
-            aria-label="Заполненность состава"
+            aria-label={t("game.fillLabel")}
           >
             <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${fill}%` }} />
           </div>
@@ -115,10 +118,10 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
           <SignupButtons gameId={game.id} current={me?.status ?? null} />
         )}
         {game.status === "closed" && (
-          <Notice>Запись закрыта организатором. Состав уже не меняется.</Notice>
+          <Notice>{t("game.closedNotice")}</Notice>
         )}
         {game.status === "cancelled" && (
-          <Notice variant="error">Игра отменена. Следите за новостями в чате.</Notice>
+          <Notice variant="error">{t("game.cancelledNotice")}</Notice>
         )}
 
         {myTeam && isActive && (
@@ -131,7 +134,7 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
             style={{ backgroundColor: myTeam.color.hex }}
           >
             <Shirt className="size-5 shrink-0" aria-hidden />
-            Ты в команде «{myTeam.team.name}»
+            {t("game.myTeam", { team: myTeam.team.name })}
           </div>
         )}
 
@@ -140,14 +143,14 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
             href={`/game/${game.id}/teams`}
             className={cn(buttonVariants({ variant: "secondary" }), "w-full")}
           >
-            Идёт драфт — смотреть
+            {t("game.draftRunning")}
           </Link>
         )}
 
         {queuePosition && isActive && (
           <Notice>
-            Вы в листе ожидания: <strong>{queuePosition}-й</strong> в очереди.
-            Если кто-то откажется, вы автоматически попадёте в состав.
+            {t("game.waitlistBefore")} <strong>{t("game.waitlistPosition", { position: queuePosition })}</strong>{" "}
+            {t("game.waitlistAfter")}
           </Notice>
         )}
 
@@ -159,16 +162,16 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
           />
         )}
 
-        <PlayerSection title="Идут" count={going.length} empty="Пока никто не записался — будьте первым!">
+        <PlayerSection title={t("game.going")} count={going.length} empty={t("game.goingEmpty")}>
           {going.map((s) => (
-            <PlayerRow key={s.playerId} entry={s} isMe={s.playerId === userId} showArrival={isActive} />
+            <PlayerRow t={t} key={s.playerId} entry={s} isMe={s.playerId === userId} showArrival={isActive} />
           ))}
         </PlayerSection>
 
         {waitlist.length > 0 && (
-          <PlayerSection title="Лист ожидания" count={waitlist.length}>
+          <PlayerSection title={t("game.waitlist")} count={waitlist.length}>
             {waitlist.map((s, i) => (
-              <PlayerRow key={s.playerId} entry={s} isMe={s.playerId === userId} position={i + 1} />
+              <PlayerRow t={t} key={s.playerId} entry={s} isMe={s.playerId === userId} position={i + 1} />
             ))}
           </PlayerSection>
         )}
@@ -180,7 +183,7 @@ export function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
           className={cn(buttonVariants(), "w-full bg-[#075E54] text-white hover:bg-[#064c44]")}
         >
           <MessageCircle aria-hidden />
-          Поделиться в WhatsApp
+          {t("common.shareWhatsapp")}
         </a>
       </CardContent>
     </Card>
@@ -213,11 +216,13 @@ function PlayerSection({
 }
 
 function PlayerRow({
+  t,
   entry,
   isMe,
   position,
   showArrival,
 }: {
+  t: T;
   entry: SignupEntry;
   isMe: boolean;
   position?: number;
@@ -233,21 +238,21 @@ function PlayerRow({
       <PlayerAvatar name={entry.name} avatarUrl={entry.avatarUrl} className="size-8 text-sm" />
       <span className="min-w-0 flex-1 truncate">
         {entry.name}
-        {isMe && <span className="text-muted-foreground"> (вы)</span>}
+        {isMe && <span className="text-muted-foreground"> {t("common.you")}</span>}
       </span>
-      {showArrival && <ArrivalBadge entry={entry} />}
+      {showArrival && <ArrivalBadge t={t} entry={entry} />}
     </li>
   );
 }
 
-export function ArrivalBadge({ entry }: { entry: SignupEntry }) {
+export function ArrivalBadge({ t, entry }: { t: T; entry: SignupEntry }) {
   if (entry.arrival === "arrived") {
-    return <Badge className="shrink-0">на месте</Badge>;
+    return <Badge className="shrink-0">{t("game.arrived")}</Badge>;
   }
   if (entry.arrival === "late") {
     return (
       <Badge variant="outline" className="shrink-0 border-amber-500/50 text-amber-700 dark:text-amber-400">
-        +{entry.lateMinutes} мин
+        {t("game.lateBadge", { minutes: entry.lateMinutes ?? 0 })}
       </Badge>
     );
   }

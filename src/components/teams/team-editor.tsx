@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { selectClassName } from "@/components/schedule/schedule-form";
 import { updateTeamAction } from "@/lib/actions/teams";
-import { TEAM_COLORS, teamColor } from "@/lib/teams/colors";
+import { colorLabel, defaultTeamName, isDefaultTeamName, TEAM_COLORS } from "@/lib/teams/colors";
 import type { SignupEntry, TeamView } from "@/lib/games";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 type Props = {
   gameId: string;
@@ -20,6 +21,7 @@ type Props = {
 };
 
 export function TeamEditor({ gameId, team, usedColors, going, onDone }: Props) {
+  const t = useT();
   const [name, setName] = useState(team.team.name);
   const [color, setColor] = useState(team.team.color);
   const [captainId, setCaptainId] = useState(team.team.captain_id ?? "");
@@ -28,9 +30,9 @@ export function TeamEditor({ gameId, team, usedColors, going, onDone }: Props) {
 
   function pickColor(hex: string) {
     // Keep a custom name; replace a default one ("Красные" -> "Синие").
-    const isDefaultName = TEAM_COLORS.some((c) => c.teamName === name) || !name.trim();
+    const isDefaultName = isDefaultTeamName(name) || !name.trim();
     setColor(hex);
-    if (isDefaultName) setName(teamColor(hex).teamName);
+    if (isDefaultName) setName(defaultTeamName(t, hex));
   }
 
   function save() {
@@ -49,7 +51,7 @@ export function TeamEditor({ gameId, team, usedColors, going, onDone }: Props) {
   return (
     <div className="flex flex-col gap-3 border-b p-3">
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`team-name-${team.team.id}`}>Название</Label>
+        <Label htmlFor={`team-name-${team.team.id}`}>{t("teams.name")}</Label>
         <Input
           id={`team-name-${team.team.id}`}
           value={name}
@@ -59,7 +61,7 @@ export function TeamEditor({ gameId, team, usedColors, going, onDone }: Props) {
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-medium">Цвет манишек</legend>
+        <legend className="mb-2 text-sm font-medium">{t("teams.bibColor")}</legend>
         <div className="grid grid-cols-5 gap-2">
           {TEAM_COLORS.map((c) => {
             const taken = c.hex !== team.team.color && usedColors.includes(c.hex);
@@ -70,9 +72,9 @@ export function TeamEditor({ gameId, team, usedColors, going, onDone }: Props) {
                 type="button"
                 disabled={taken}
                 onClick={() => pickColor(c.hex)}
-                aria-label={`${c.label}${taken ? " (занят)" : ""}`}
+                aria-label={`${colorLabel(t, c.hex)}${taken ? t("teams.taken") : ""}`}
                 aria-pressed={selected}
-                title={c.label}
+                title={colorLabel(t, c.hex)}
                 className={cn(
                   "flex size-11 items-center justify-center rounded-full border-2 border-foreground/15 disabled:opacity-25",
                   selected && "ring-3 ring-foreground ring-offset-2 ring-offset-background",
@@ -89,18 +91,18 @@ export function TeamEditor({ gameId, team, usedColors, going, onDone }: Props) {
             );
           })}
         </div>
-        <p className="text-xs text-muted-foreground">{teamColor(color).label}</p>
+        <p className="text-xs text-muted-foreground">{colorLabel(t, color)}</p>
       </fieldset>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`team-captain-${team.team.id}`}>Капитан</Label>
+        <Label htmlFor={`team-captain-${team.team.id}`}>{t("teams.captain")}</Label>
         <select
           id={`team-captain-${team.team.id}`}
           value={captainId}
           onChange={(e) => setCaptainId(e.target.value)}
           className={selectClassName}
         >
-          <option value="">Без капитана</option>
+          <option value="">{t("teams.noCaptain")}</option>
           {going.map((p) => (
             <option key={p.playerId} value={p.playerId}>
               {p.name}
@@ -108,7 +110,7 @@ export function TeamEditor({ gameId, team, usedColors, going, onDone }: Props) {
           ))}
         </select>
         <p className="text-xs text-muted-foreground">
-          Капитан сразу попадает в эту команду и закрепляется в ней.
+          {t("teams.captainHint")}
         </p>
       </div>
 
@@ -119,10 +121,10 @@ export function TeamEditor({ gameId, team, usedColors, going, onDone }: Props) {
       )}
       <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" onClick={onDone} disabled={pending}>
-          Отмена
+          {t("teams.cancel")}
         </Button>
         <Button onClick={save} disabled={pending}>
-          Сохранить
+          {t("common.save")}
         </Button>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DEFAULT_GOAL_LIMIT, DEFAULT_MATCH_MINUTES } from "@/lib/match/format";
+import { useT } from "@/lib/i18n/client";
 
 type Props = {
   idPrefix: string;
@@ -13,14 +14,15 @@ type Props = {
 
 // Match format inside a form: fields goalLimit / noGoalLimit / matchMinutes.
 export function FormatFields({ idPrefix, goalLimit, matchMinutes }: Props) {
+  const t = useT();
   const [noLimit, setNoLimit] = useState(goalLimit === null);
 
   return (
     <fieldset className="flex flex-col gap-2 rounded-lg border p-3">
-      <legend className="px-1 text-sm font-medium">Формат матча</legend>
+      <legend className="px-1 text-sm font-medium">{t("schedule.formatLegend")}</legend>
       <div className="grid grid-cols-2 items-end gap-3">
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`${idPrefix}-goals`}>Лимит голов</Label>
+          <Label htmlFor={`${idPrefix}-goals`}>{t("schedule.goalLimit")}</Label>
           <Input
             id={`${idPrefix}-goals`}
             name="goalLimit"
@@ -34,7 +36,7 @@ export function FormatFields({ idPrefix, goalLimit, matchMinutes }: Props) {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`${idPrefix}-minutes`}>Длительность, мин</Label>
+          <Label htmlFor={`${idPrefix}-minutes`}>{t("schedule.minutes")}</Label>
           <Input
             id={`${idPrefix}-minutes`}
             name="matchMinutes"
@@ -55,11 +57,9 @@ export function FormatFields({ idPrefix, goalLimit, matchMinutes }: Props) {
           onChange={(e) => setNoLimit(e.target.checked)}
           className="size-5 accent-primary"
         />
-        Без лимита голов
+        {t("schedule.noGoalLimit")}
       </label>
-      <p className="text-xs text-muted-foreground">
-        Матч заканчивается, когда команда забила лимит голов или вышло время — что раньше.
-      </p>
+      <p className="text-xs text-muted-foreground">{t("schedule.formatHint")}</p>
     </fieldset>
   );
 }

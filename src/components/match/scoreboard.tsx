@@ -5,13 +5,18 @@ import { computeElapsed, displayClock } from "@/lib/match/timer";
 import type { LiveMatch, LiveTeam } from "@/lib/match/types";
 import { teamColor } from "@/lib/teams/colors";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
+import type { T } from "@/lib/i18n";
 
-export function statusLabel(match: Pick<LiveMatch, "status" | "period" | "periods" | "timer_status">): string {
-  if (match.status === "scheduled") return "Не начался";
-  if (match.status === "finished") return "Матч завершён";
-  if (match.status === "break") return "Перерыв";
-  const period = match.periods > 1 ? `${match.period}-й тайм` : "Идёт";
-  return match.timer_status === "paused" ? `${period} · пауза` : period;
+export function statusLabel(
+  t: T,
+  match: Pick<LiveMatch, "status" | "period" | "periods" | "timer_status">,
+): string {
+  if (match.status === "scheduled") return t("match.statusNotStarted");
+  if (match.status === "finished") return t("match.statusFinished");
+  if (match.status === "break") return t("match.statusBreak");
+  const period = match.periods > 1 ? t("match.statusPeriod", { period: match.period }) : t("match.statusRunning");
+  return match.timer_status === "paused" ? t("match.statusPaused", { status: period }) : period;
 }
 
 export function MatchClock({
@@ -78,6 +83,7 @@ export function Scoreboard({
   // Shown under the status, e.g. the match format "до 2 голов · 7 мин".
   note?: string;
 }) {
+  const tr = useT();
   const teamA = teams.find((t) => t.id === match.team_a_id);
   const teamB = teams.find((t) => t.id === match.team_b_id);
   return (
@@ -94,7 +100,7 @@ export function Scoreboard({
         addedClassName={big ? "text-3xl" : "text-sm"}
       />
       <span className={cn("text-muted-foreground", big ? "text-base font-medium" : "text-xs")}>
-        {statusLabel(match)}
+        {statusLabel(tr, match)}
       </span>
       {note && <span className="text-sm text-muted-foreground">{note}</span>}
     </div>

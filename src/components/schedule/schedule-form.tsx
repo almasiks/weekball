@@ -4,12 +4,13 @@ import { useActionState, useEffect, useRef } from "react";
 import { createScheduleAction, updateScheduleAction } from "@/lib/actions/games";
 import type { FormState } from "@/lib/forms";
 import type { ScheduleRow } from "@/lib/supabase/database.types";
-import { WEEKDAYS, formatTime } from "@/lib/datetime";
+import { WEEKDAY_NUMBERS, formatTime, weekdayName } from "@/lib/datetime";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/notice";
 import { FormatFields } from "@/components/format-fields";
 import { SubmitButton } from "@/components/submit-button";
+import { useT } from "@/lib/i18n/client";
 
 export const selectClassName =
   "h-11 w-full rounded-lg border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
@@ -17,6 +18,7 @@ export const selectClassName =
 type Props = { schedule?: ScheduleRow; onSaved?: () => void };
 
 export function ScheduleForm({ schedule, onSaved }: Props) {
+  const t = useT();
   const [state, formAction] = useActionState<FormState, FormData>(
     schedule ? updateScheduleAction : createScheduleAction,
     {},
@@ -35,22 +37,22 @@ export function ScheduleForm({ schedule, onSaved }: Props) {
       {schedule && <input type="hidden" name="scheduleId" value={schedule.id} />}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`${idPrefix}-weekday`}>День</Label>
+          <Label htmlFor={`${idPrefix}-weekday`}>{t("schedule.day")}</Label>
           <select
             id={`${idPrefix}-weekday`}
             name="weekday"
             defaultValue={schedule?.weekday ?? 6}
             className={selectClassName}
           >
-            {WEEKDAYS.map((label, i) => (
-              <option key={label} value={i}>
-                {label}
+            {WEEKDAY_NUMBERS.map((day) => (
+              <option key={day} value={day}>
+                {weekdayName(t, day)}
               </option>
             ))}
           </select>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`${idPrefix}-time`}>Время</Label>
+          <Label htmlFor={`${idPrefix}-time`}>{t("schedule.time")}</Label>
           <Input
             id={`${idPrefix}-time`}
             name="startTime"
@@ -61,17 +63,17 @@ export function ScheduleForm({ schedule, onSaved }: Props) {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-place`}>Место</Label>
+        <Label htmlFor={`${idPrefix}-place`}>{t("schedule.place")}</Label>
         <Input
           id={`${idPrefix}-place`}
           name="place"
           maxLength={120}
-          placeholder="Например, поле на Абая"
+          placeholder={t("schedule.placePlaceholder")}
           defaultValue={schedule?.place ?? ""}
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-max`}>Лимит игроков</Label>
+        <Label htmlFor={`${idPrefix}-max`}>{t("schedule.maxPlayers")}</Label>
         <Input
           id={`${idPrefix}-max`}
           name="maxPlayers"
@@ -89,8 +91,8 @@ export function ScheduleForm({ schedule, onSaved }: Props) {
         matchMinutes={schedule?.match_minutes}
       />
       {state.error && <Notice variant="error">{state.error}</Notice>}
-      <SubmitButton pendingText="Сохраняем…">
-        {schedule ? "Сохранить" : "Добавить расписание"}
+      <SubmitButton pendingText={t("common.saving")}>
+        {schedule ? t("common.save") : t("schedule.add")}
       </SubmitButton>
     </form>
   );

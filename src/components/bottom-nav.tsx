@@ -4,21 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChartColumn, House, ShieldCheck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 export function BottomNav({ isOrganizer }: { isOrganizer: boolean }) {
   const pathname = usePathname();
+  const t = useT();
   const items: { href: string; label: string; icon: typeof House; also?: string[] }[] = [
-    { href: "/", label: "Главная", icon: House },
-    { href: "/roster", label: "Состав", icon: Users, also: ["/members"] },
-    { href: "/stats", label: "Статистика", icon: ChartColumn, also: ["/players", "/history"] },
+    { href: "/", label: t("nav.home"), icon: House },
+    { href: "/roster", label: t("nav.roster"), icon: Users, also: ["/members"] },
+    { href: "/stats", label: t("nav.stats"), icon: ChartColumn, also: ["/players", "/history"] },
     ...(isOrganizer
-      ? [{ href: "/admin", label: "Админ", icon: ShieldCheck }]
+      ? [{ href: "/admin", label: t("nav.admin"), icon: ShieldCheck }]
       : []),
   ];
 
   return (
     <nav
-      aria-label="Основная навигация"
+      aria-label={t("nav.label")}
       className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
     >
       <ul className="mx-auto flex max-w-md">

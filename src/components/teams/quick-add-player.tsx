@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { quickAddPlayerAction } from "@/lib/actions/teams";
+import { useT } from "@/lib/i18n/client";
 
 // "Добавить нового игрока" in the team builder: created as present, appears in "Не распределены".
 export function QuickAddPlayer({ gameId }: { gameId: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [regular, setRegular] = useState(true);
@@ -35,11 +37,11 @@ export function QuickAddPlayer({ gameId }: { gameId: string }) {
     <>
       <Button variant="outline" onClick={() => setOpen(true)}>
         <UserPlus aria-hidden />
-        Добавить нового игрока
+        {t("checkin.addNew")}
       </Button>
-      <BottomSheet open={open} title="Новый игрок" onClose={() => setOpen(false)}>
+      <BottomSheet open={open} title={t("checkin.newPlayer")} onClose={() => setOpen(false)}>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="quick-player">Имя</Label>
+          <Label htmlFor="quick-player">{t("checkin.name")}</Label>
           <Input
             id="quick-player"
             value={name}
@@ -56,11 +58,11 @@ export function QuickAddPlayer({ gameId }: { gameId: string }) {
             onChange={(e) => setRegular(e.target.checked)}
             className="size-5 accent-primary"
           />
-          Добавить в постоянный состав
+          {t("checkin.addToRoster")}
         </label>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button size="lg" disabled={pending || !name.trim()} onClick={add}>
-          Добавить (пришёл)
+          {t("teams.quickAdd")}
         </Button>
       </BottomSheet>
     </>

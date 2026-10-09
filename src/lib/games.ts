@@ -11,6 +11,7 @@ import type {
   SignupStatus,
   TeamRow,
 } from "@/lib/supabase/database.types";
+import { getT } from "@/lib/i18n/server";
 
 export type SignupEntry = {
   playerId: string;
@@ -69,7 +70,7 @@ export async function getUpcomingGames(groupId: string, limit = 5) {
 // RLS decides visibility: teams come back only for organizers, or once published / drafting.
 export const getGameView = cache(
   async (gameId: string): Promise<GameView | null> => {
-    const supabase = await createClient();
+    const [supabase, t] = await Promise.all([createClient(), getT()]);
     const [{ data: game }, { data: signups, error }, { data: teams }, { data: teamPlayers }] =
       await Promise.all([
         supabase.from("games").select("*").eq("id", gameId).maybeSingle(),
@@ -96,7 +97,7 @@ export const getGameView = cache(
 
     const entries: SignupEntry[] = (signups ?? []).map((s) => ({
       playerId: s.player_id,
-      name: s.players?.name ?? "Без имени",
+      name: s.players?.name ?? t("common.unnamed"),
       avatarUrl: s.players?.avatar_url ?? null,
       level: s.players?.level ?? 3,
       rating: s.players?.rating ?? null,

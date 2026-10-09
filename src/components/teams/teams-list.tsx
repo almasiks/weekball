@@ -3,14 +3,17 @@ import { PlayerAvatar } from "@/components/player-avatar";
 import { TeamHeader } from "@/components/teams/team-header";
 import { positionShort } from "@/lib/positions";
 import type { TeamView } from "@/lib/games";
+import { getT } from "@/lib/i18n/server";
 
 // Read-only lineups for players (published teams).
-export function TeamsList({ teams, userId }: { teams: TeamView[]; userId: string | null }) {
+export async function TeamsList({ teams, userId }: { teams: TeamView[]; userId: string | null }) {
+  const tr = await getT();
   return (
     <div className="grid gap-3">
       {teams.map((t) => (
         <section key={t.team.id} className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
           <TeamHeader
+            t={tr}
             name={t.team.name}
             color={t.color}
             count={t.players.length}
@@ -24,19 +27,19 @@ export function TeamsList({ teams, userId }: { teams: TeamView[]; userId: string
                 <PlayerAvatar name={p.name} avatarUrl={p.avatarUrl} className="size-7 text-xs" />
                 <span className="min-w-0 flex-1 truncate">
                   {p.name}
-                  {p.playerId === userId && <span className="text-muted-foreground"> (вы)</span>}
+                  {p.playerId === userId && <span className="text-muted-foreground"> {tr("common.you")}</span>}
                   {t.team.captain_id === p.playerId && (
-                    <span className="text-muted-foreground"> · капитан</span>
+                    <span className="text-muted-foreground">{tr("teams.captainMark")}</span>
                   )}
                 </span>
-                {p.addedLate && <Timer className="size-4 text-amber-600" aria-label="докинут позже" />}
-                {positionShort(p.position) && (
-                  <span className="text-xs text-muted-foreground">{positionShort(p.position)}</span>
+                {p.addedLate && <Timer className="size-4 text-amber-600" aria-label={tr("teams.addedLater")} />}
+                {positionShort(tr, p.position) && (
+                  <span className="text-xs text-muted-foreground">{positionShort(tr, p.position)}</span>
                 )}
               </li>
             ))}
             {t.players.length === 0 && (
-              <li className="py-2 text-sm text-muted-foreground">Пока никого</li>
+              <li className="py-2 text-sm text-muted-foreground">{tr("teams.nobody")}</li>
             )}
           </ul>
         </section>

@@ -1,11 +1,13 @@
 import { START_RATING } from "@/lib/rating/elo";
+import { getT } from "@/lib/i18n/server";
 
 type Point = { starts_at: string; rating_after: number; rating_before: number };
 
 // Lightweight SVG line chart of the rating after each game (no chart library).
-export function RatingChart({ history }: { history: Point[] }) {
+export async function RatingChart({ history }: { history: Point[] }) {
+  const t = await getT();
   if (history.length === 0) {
-    return <p className="text-sm text-muted-foreground">График появится после первой завершённой игры.</p>;
+    return <p className="text-sm text-muted-foreground">{t("stats.chartEmpty")}</p>;
   }
 
   const values = [history[0].rating_before, ...history.map((h) => h.rating_after)];
@@ -26,7 +28,7 @@ export function RatingChart({ history }: { history: Point[] }) {
         viewBox={`0 0 ${W} ${H}`}
         className="h-auto w-full text-primary"
         role="img"
-        aria-label={`Рейтинг: с ${values[0]} до ${last} за ${history.length} игр`}
+        aria-label={t("stats.chartLabel", { from: values[0], to: last, count: history.length })}
       >
         <line
           x1={pad.x}
@@ -45,8 +47,7 @@ export function RatingChart({ history }: { history: Point[] }) {
         ))}
       </svg>
       <figcaption className="text-xs text-muted-foreground">
-        {history.length} игр · {change >= 0 ? "+" : ""}
-        {change} с начала
+        {t("stats.chartCaption", { count: history.length, change: `${change >= 0 ? "+" : ""}${change}` })}
       </figcaption>
     </figure>
   );

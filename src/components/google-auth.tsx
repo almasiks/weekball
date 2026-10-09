@@ -1,5 +1,6 @@
 import { linkGoogleAction, signInWithGoogleAction } from "@/lib/actions/auth";
 import { SubmitButton } from "@/components/submit-button";
+import { getT } from "@/lib/i18n/server";
 
 function GoogleIcon() {
   return (
@@ -24,23 +25,25 @@ function GoogleIcon() {
   );
 }
 
-export function GoogleSignInButton({ label = "Войти через Google" }: { label?: string }) {
+export async function GoogleSignInButton({ label }: { label?: string }) {
+  const t = await getT();
   return (
     <form action={signInWithGoogleAction}>
-      <SubmitButton variant="outline" className="w-full" pendingText="Переходим в Google…">
+      <SubmitButton variant="outline" className="w-full" pendingText={t("auth.redirecting")}>
         <GoogleIcon />
-        {label}
+        {label ?? t("auth.signIn")}
       </SubmitButton>
     </form>
   );
 }
 
-export function GoogleLinkButton() {
+export async function GoogleLinkButton() {
+  const t = await getT();
   return (
     <form action={linkGoogleAction}>
-      <SubmitButton variant="outline" className="w-full" pendingText="Переходим в Google…">
+      <SubmitButton variant="outline" className="w-full" pendingText={t("auth.redirecting")}>
         <GoogleIcon />
-        Привязать Google
+        {t("auth.link")}
       </SubmitButton>
     </form>
   );

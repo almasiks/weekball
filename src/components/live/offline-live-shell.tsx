@@ -7,10 +7,12 @@ import { Notice } from "@/components/notice";
 import { LiveConsole } from "@/components/live/live-console";
 import { formatGameDate } from "@/lib/datetime";
 import { loadSnapshot, type LiveSnapshot } from "@/lib/match/snapshot";
+import { useT } from "@/lib/i18n/client";
 
 type State = { kind: "loading" } | { kind: "missing" } | { kind: "ready"; snapshot: LiveSnapshot };
 
 export function OfflineLiveShell() {
+  const tr = useT();
   const [state, setState] = useState<State>({ kind: "loading" });
   const [online, setOnline] = useState(false);
 
@@ -35,20 +37,20 @@ export function OfflineLiveShell() {
   }, []);
 
   if (state.kind === "loading") {
-    return <div className="h-40 animate-pulse rounded-xl bg-muted" aria-label="Загрузка" />;
+    return <div className="h-40 animate-pulse rounded-xl bg-muted" aria-label={tr("common.loading")} />;
   }
 
   if (state.kind === "missing") {
     return (
       <div className="flex flex-col items-center gap-4 pt-10 text-center">
         <WifiOff className="size-12 text-muted-foreground" aria-hidden />
-        <h1 className="text-xl font-semibold">Нет сети</h1>
+        <h1 className="text-xl font-semibold">{tr("match.noNetwork")}</h1>
         <p className="text-muted-foreground">
-          Этот матч ещё не открывался на этом телефоне, поэтому без интернета его не показать.
+          {tr("match.neverOpened")}
         </p>
         <Button size="lg" onClick={() => window.location.reload()}>
           <RotateCw aria-hidden />
-          Попробовать снова
+          {tr("common.tryAgain")}
         </Button>
       </div>
     );
@@ -58,26 +60,27 @@ export function OfflineLiveShell() {
   return (
     <div className="flex flex-col gap-4">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight">Матч</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{tr("match.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {formatGameDate(snapshot.meta.startsAt, snapshot.meta.timezone)}
+          {formatGameDate(tr, snapshot.meta.startsAt, snapshot.meta.timezone)}
           {snapshot.meta.place && ` · ${snapshot.meta.place}`}
         </p>
       </header>
       {online ? (
         <Notice variant="success">
           <span className="flex flex-wrap items-center gap-2">
-            Сеть появилась.
+            {tr("match.backOnline")}
             <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
-              Обновить страницу
+              {tr("match.refreshPage")}
             </Button>
           </span>
         </Notice>
       ) : (
         <Notice>
-          Нет сети — показано последнее сохранённое состояние (
-          {new Date(snapshot.savedAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}).
-          Голы и таймер сохраняются на телефоне и отправятся, когда появится интернет.
+          {tr("match.offlineState", {
+            time: new Date(snapshot.savedAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }),
+          })}{" "}
+          {tr("match.offlineQueue")}
         </Notice>
       )}
       <LiveConsole

@@ -1,5 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-import { createGameTomorrow, createGroup, joinGroup, newDevice, unique } from "./helpers";
+import { expect, type Page } from "@playwright/test";
+import { createGameTomorrow, enter, enterAsOrganizer, newDevice, test, unique } from "./helpers";
 
 async function scoreGoal(organizer: Page, teamButtonIndex: number) {
   await organizer.getByRole("button", { name: "⚽ Гол" }).nth(teamButtonIndex).click();
@@ -10,17 +10,17 @@ async function scoreGoal(organizer: Page, teamButtonIndex: number) {
 
 test("organizer runs a match (incl. offline goal), stats appear after finishing", async ({ browser }) => {
   const organizer = await newDevice(browser);
-  const invite = await createGroup(organizer, unique("Матч"), "Организатор");
+  await enterAsOrganizer(organizer, "Организатор");
   await createGameTomorrow(organizer);
   await organizer.goto("/");
   await organizer.getByRole("button", { name: "Иду", exact: true }).click();
-  await expect(organizer.getByText(/Записано\s*1\s*из\s*20/)).toBeVisible();
+  await expect(organizer.getByText("Записано 1 / 20")).toBeVisible();
 
   const viewer = await newDevice(browser);
-  await joinGroup(viewer, invite, unique("Зритель"));
+  await enter(viewer, unique("Зритель"));
   await viewer.goto("/");
   await viewer.getByRole("button", { name: "Иду", exact: true }).click();
-  await expect(viewer.getByRole("button", { name: "Иду", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(viewer.getByRole("button", { name: "Не иду" })).toBeVisible();
 
   // Teams
   await organizer.goto("/");
@@ -43,6 +43,22 @@ test("organizer runs a match (incl. offline goal), stats appear after finishing"
   // Goal in two taps (+ "no assist")
   await scoreGoal(organizer, 0);
   await expect(organizer.getByText("Синхронизировано")).toBeVisible();
+
+  // Home: the bright LIVE strip with the score and the running clock, and the line-ups
+  // (kick-off publishes them). The strip and the "Матч" tab lead to the live view.
+  await viewer.goto("/");
+  const live = viewer.getByRole("link", { name: /^Идёт матч: .+ 1:0 .+/ });
+  await expect(live).toContainText("LIVE");
+  await expect(live).toContainText(/1:0 · \d{2}:\d{2}/);
+  await expect(viewer.getByRole("heading", { name: "Составы" })).toBeVisible();
+  await live.click();
+  await expect(viewer).toHaveURL(/\/match$/);
+  await expect(viewer.locator("li", { hasText: "⚽" }).first()).toBeVisible();
+  // For the organizer the same tab opens the console.
+  const organizerTab = await organizer.context().newPage();
+  await organizerTab.goto("/match");
+  await expect(organizerTab).toHaveURL(new RegExp(`${new URL(gameUrl).pathname}/live$`));
+  await organizerTab.close();
 
   // The viewer sees it on the game page (Realtime), without reloading.
   await viewer.goto(gameUrl);

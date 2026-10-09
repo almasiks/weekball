@@ -1,21 +1,21 @@
-import { expect, test } from "@playwright/test";
-import { createGameTomorrow, createGroup, joinGroup, newDevice, unique } from "./helpers";
+import { expect } from "@playwright/test";
+import { createGameTomorrow, enter, enterAsOrganizer, newDevice, test, unique } from "./helpers";
 
 test("organizer builds and publishes teams, the player sees their team", async ({ browser }) => {
   const organizer = await newDevice(browser);
-  const invite = await createGroup(organizer, unique("Команды"), "Организатор");
+  await enterAsOrganizer(organizer, "Организатор");
   await createGameTomorrow(organizer);
   await organizer.goto("/");
   await organizer.getByRole("button", { name: "Иду", exact: true }).click();
-  await expect(organizer.getByText(/Записано\s*1\s*из\s*20/)).toBeVisible();
+  await expect(organizer.getByText("Записано 1 / 20")).toBeVisible();
 
   const players = [];
   for (let i = 0; i < 3; i++) {
     const page = await newDevice(browser);
-    await joinGroup(page, invite, unique(`Игрок${i + 1}`));
+    await enter(page, unique(`Игрок${i + 1}`));
     await page.goto("/");
     await page.getByRole("button", { name: "Иду", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Иду", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Не иду" })).toBeVisible();
     players.push(page);
   }
 

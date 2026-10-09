@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { createGameTomorrow, createGroup, unique } from "./helpers";
+import { expect } from "@playwright/test";
+import { createGameTomorrow, enterAsOrganizer, test } from "./helpers";
 
 const NAMES = [
   "Азамат", "Бекзат", "Данияр", "Ерлан", "Жандос", "Ильяс", "Канат", "Марат", "Нурлан", "Олжас",
@@ -7,10 +7,10 @@ const NAMES = [
 ];
 
 // "Играю один": only the organizer has the app, the others are names in the roster.
-test("solo organizer: roster, check-in (offline too), quick add, teams from present, claim", async ({ browser }) => {
+test("solo organizer: roster, check-in (offline too), quick add, teams from present, entering with a roster name", async ({ browser }) => {
   const context = await browser.newContext();
   const organizer = await context.newPage();
-  const invite = await createGroup(organizer, unique("Состав"), "Организатор");
+  await enterAsOrganizer(organizer, "Организатор");
   await createGameTomorrow(organizer);
 
   // --- 20 names at once; a duplicate is highlighted
@@ -73,18 +73,22 @@ test("solo organizer: roster, check-in (offline too), quick add, teams from pres
     await expect(organizer.getByRole("button", { name: card })).toBeVisible();
   }
 
-  // --- A real person claims their name and keeps the history
+  // --- A real person opens the site, types the roster name and keeps its history
   const phone = await (await browser.newContext()).newPage();
-  await phone.goto(new URL(invite).pathname);
-  await phone.getByRole("button", { name: "Азамат", exact: true }).click();
-  await phone.getByRole("button", { name: "Это я" }).click();
-  await expect(phone).toHaveURL(/\/roster/);
-  await phone.goto(gameUrl);
-  await expect(phone.getByText(/Ты в команде|Азамат/).first()).toBeVisible();
+  await phone.goto(gameUrl); // e.g. the link from WhatsApp: the name is asked right there
+  await phone.getByLabel("Имя").fill("азамат");
+  await phone.getByRole("button", { name: "Войти" }).click();
+  // The organizer already checked Азамат in: this phone IS that player now.
+  const me = phone.getByRole("listitem").filter({ hasText: "Азамат (вы)" });
+  await expect(me.getByText("на месте")).toBeVisible();
+  await phone.goto("/roster");
+  await expect(phone.getByRole("link", { name: /Азамат \(вы\)/ })).toBeVisible();
+  await expect(phone.getByRole("main").getByRole("link", { name: /^Азамат/ })).toHaveCount(1); // no duplicate player
 
-  // The claimed name is no longer offered to others.
+  // The name now belongs to that phone: somebody else gets the hint.
   const other = await (await browser.newContext()).newPage();
-  await other.goto(new URL(invite).pathname);
-  await expect(other.getByRole("button", { name: "Бекзат", exact: true })).toBeVisible();
-  await expect(other.getByRole("button", { name: "Азамат", exact: true })).toHaveCount(0);
+  await other.goto("/");
+  await other.getByLabel("Имя").fill("Азамат");
+  await other.getByRole("button", { name: "Войти" }).click();
+  await expect(other.getByText("Такое имя уже есть, добавь фамилию или номер.")).toBeVisible();
 });

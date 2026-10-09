@@ -1,5 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-import { createGameTomorrow, createGroup, joinGroup, newDevice, unique } from "./helpers";
+import { expect, type Page } from "@playwright/test";
+import { createGameTomorrow, enter, enterAsOrganizer, newDevice, test, unique } from "./helpers";
 
 async function scoreGoal(organizer: Page, teamButtonIndex: number) {
   await organizer.getByRole("button", { name: "⚽ Гол" }).nth(teamButtonIndex).click();
@@ -10,24 +10,24 @@ async function scoreGoal(organizer: Page, teamButtonIndex: number) {
 test("match format: goal limit ends the match, undo reopens it, time runs out", async ({ browser }) => {
   test.setTimeout(240_000);
   const organizer = await newDevice(browser);
-  const invite = await createGroup(organizer, unique("Формат"), "Организатор");
+  await enterAsOrganizer(organizer, "Организатор");
   await createGameTomorrow(organizer); // default format from the form: 2 goals, 7 min
   await organizer.goto("/");
   await organizer.getByRole("button", { name: "Иду", exact: true }).click();
-  await expect(organizer.getByText(/Записано\s*1\s*из\s*20/)).toBeVisible();
+  await expect(organizer.getByText("Записано 1 / 20")).toBeVisible();
 
   const viewer = await newDevice(browser);
-  await joinGroup(viewer, invite, unique("Зритель"));
+  await enter(viewer, unique("Зритель"));
   await viewer.goto("/");
   await viewer.getByRole("button", { name: "Иду", exact: true }).click();
-  await expect(viewer.getByRole("button", { name: "Иду", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(viewer.getByRole("button", { name: "Не иду" })).toBeVisible();
 
   await organizer.goto("/");
   await organizer.locator('a[href^="/game/"]').first().click();
   await organizer.waitForURL(/\/game\/[0-9a-f-]{36}$/);
   const gameUrl = organizer.url();
   await organizer.getByRole("button", { name: "Инфо" }).click();
-  await expect(organizer.getByText("до 2 голов · 7 мин")).toBeVisible();
+  await expect(organizer.getByRole("dialog").getByText("до 2 голов · 7 мин")).toBeVisible();
   await organizer.getByRole("dialog").getByRole("button", { name: "Закрыть" }).first().click();
   await organizer.getByRole("link", { name: "Разделить на команды" }).click();
   await organizer.getByRole("button", { name: "2 команды" }).click();

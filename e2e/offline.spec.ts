@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { createGameTomorrow, createGroup, joinGroup, unique } from "./helpers";
+import { expect } from "@playwright/test";
+import { createGameTomorrow, enter, enterAsOrganizer, test, unique } from "./helpers";
 
 // Needs the production build (`npm run build && npm run start`): the service
 // worker is generated at build time.
@@ -8,17 +8,17 @@ test.use({ serviceWorkers: "allow" });
 test("the match console reopens offline and keeps accepting events", async ({ browser }) => {
   const context = await browser.newContext({ serviceWorkers: "allow" });
   const organizer = await context.newPage();
-  const invite = await createGroup(organizer, unique("Офлайн"), "Организатор");
+  await enterAsOrganizer(organizer, "Организатор");
   await createGameTomorrow(organizer);
   await organizer.goto("/");
   await organizer.getByRole("button", { name: "Иду", exact: true }).click();
-  await expect(organizer.getByText(/Записано\s*1\s*из\s*20/)).toBeVisible();
+  await expect(organizer.getByText("Записано 1 / 20")).toBeVisible();
 
   const player = await (await browser.newContext()).newPage();
-  await joinGroup(player, invite, unique("Игрок"));
+  await enter(player, unique("Игрок"));
   await player.goto("/");
   await player.getByRole("button", { name: "Иду", exact: true }).click();
-  await expect(player.getByRole("button", { name: "Иду", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(player.getByRole("button", { name: "Не иду" })).toBeVisible();
 
   await organizer.goto("/");
   await organizer.locator('a[href^="/game/"]').first().click();

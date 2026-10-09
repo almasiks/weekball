@@ -1,5 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-import { createGameTomorrow, createGroup, joinGroup, unique } from "./helpers";
+import { expect, type Page } from "@playwright/test";
+import { createGameTomorrow, enter, enterAsOrganizer, test, unique } from "./helpers";
 
 // Needs the production build (service worker for the offline part).
 test.use({ serviceWorkers: "allow" });
@@ -46,17 +46,17 @@ test("sound board: built-in + own sounds, auto sounds, works offline", async ({ 
     window.addEventListener("weekball:sound", (e) => w.__sounds.push((e as CustomEvent<Played>).detail));
   });
   const organizer = await context.newPage();
-  const invite = await createGroup(organizer, unique("Звуки"), "Организатор");
+  await enterAsOrganizer(organizer, "Организатор");
   await createGameTomorrow(organizer);
   await organizer.goto("/");
   await organizer.getByRole("button", { name: "Иду", exact: true }).click();
-  await expect(organizer.getByText(/Записано\s*1\s*из\s*20/)).toBeVisible();
+  await expect(organizer.getByText("Записано 1 / 20")).toBeVisible();
 
   const player = await (await browser.newContext()).newPage();
-  await joinGroup(player, invite, unique("Игрок"));
+  await enter(player, unique("Игрок"));
   await player.goto("/");
   await player.getByRole("button", { name: "Иду", exact: true }).click();
-  await expect(player.getByRole("button", { name: "Иду", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(player.getByRole("button", { name: "Не иду" })).toBeVisible();
 
   // --- Admin: own button + replace the whistle
   await organizer.goto("/admin");
@@ -76,7 +76,7 @@ test("sound board: built-in + own sounds, auto sounds, works offline", async ({ 
   await organizer.getByRole("button", { name: "Сохранить" }).click();
   await expect(organizer.getByRole("dialog")).toBeHidden();
   await organizer.getByRole("button", { name: "Инфо" }).click();
-  await expect(organizer.getByText("до 2 голов · 2 мин")).toBeVisible();
+  await expect(organizer.getByRole("dialog").getByText("до 2 голов · 2 мин")).toBeVisible();
   await organizer.getByRole("dialog").getByRole("button", { name: "Закрыть" }).first().click();
   await organizer.getByRole("link", { name: "Разделить на команды" }).click();
   await organizer.getByRole("button", { name: "2 команды" }).click();

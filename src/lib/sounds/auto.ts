@@ -15,6 +15,11 @@ export function minuteWarningDue(match: LiveMatch, serverNowMs: number): boolean
   return left > 0 && left <= MINUTE_WARNING_MS;
 }
 
+/** "Матч завершён!": the match just ended while this console was open, for any reason (also by hand). */
+export function matchEnded(before: LiveMatch["status"] | undefined, after: LiveMatch): boolean {
+  return (before === "live" || before === "break") && after.status === "finished";
+}
+
 /** Final whistle: the match just ended by itself (time up or goal limit). */
 export function endedByItself(before: LiveMatch["status"] | undefined, after: LiveMatch): boolean {
   return (

@@ -67,7 +67,7 @@ export type SoundRow = {
   group_id: string;
   name: string;
   file_path: string;
-  builtin_key: "minute" | "out" | "whistle" | "final" | null;
+  builtin_key: "minute" | "out" | "whistle" | "final" | "finished" | null;
   sort_order: number;
   created_at: string;
 };

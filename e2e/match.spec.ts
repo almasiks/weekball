@@ -65,7 +65,7 @@ test("organizer runs a match (incl. offline goal), stats appear after finishing"
   // Finish the match and the game.
   await organizer.getByRole("button", { name: "Завершить матч" }).click();
   await organizer.getByRole("dialog").getByRole("button", { name: "Завершить" }).click();
-  await expect(organizer.getByText(/Матч завершён/).first()).toBeVisible();
+  await expect(organizer.getByText(/Матч завершён · завершён вручную/)).toBeVisible();
   await organizer.getByRole("button", { name: "Завершить игру" }).click();
   await organizer.getByRole("dialog").getByRole("button", { name: "Завершить" }).click();
   await expect(organizer).toHaveURL(gameUrl);

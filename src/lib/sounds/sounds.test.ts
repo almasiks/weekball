@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { endedByItself, minuteWarningDue } from "./auto";
+import { endedByItself, matchEnded, minuteWarningDue } from "./auto";
 import { checkSoundFile } from "./builtin";
 import type { LiveMatch } from "@/lib/match/types";
 
@@ -54,6 +54,24 @@ describe("endedByItself", () => {
     expect(endedByItself("live", finished("manual"))).toBe(false);
     expect(endedByItself("finished", finished("time"))).toBe(false); // already over when the page opened
     expect(endedByItself(undefined, finished("time"))).toBe(false);
+  });
+});
+
+describe("matchEnded", () => {
+  it("is true for every live/break -> finished transition, also a manual one", () => {
+    const finished = (reason: LiveMatch["finish_reason"]) => ({
+      ...match,
+      status: "finished" as const,
+      finish_reason: reason,
+    });
+    expect(matchEnded("live", finished("manual"))).toBe(true);
+    expect(matchEnded("break", finished("manual"))).toBe(true);
+    expect(matchEnded("live", finished("time"))).toBe(true);
+    expect(matchEnded("live", finished("goal_limit"))).toBe(true);
+    expect(matchEnded("finished", finished("manual"))).toBe(false); // already over when the page opened
+    expect(matchEnded(undefined, finished("time"))).toBe(false);
+    expect(matchEnded("scheduled", finished("manual"))).toBe(false);
+    expect(matchEnded("live", { ...match, status: "break" })).toBe(false);
   });
 });
 

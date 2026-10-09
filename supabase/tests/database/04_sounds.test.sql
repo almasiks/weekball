@@ -1,6 +1,6 @@
 -- pgTAP: sound board permissions (table + storage objects) and the auto sounds switch.
 begin;
-select plan(12);
+select plan(14);
 
 create function pg_temp.login(uid uuid) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
@@ -38,6 +38,16 @@ select throws_ok(
      values ((select id from ctx), 'Ещё минута', (select id from ctx)::text || '/m2.mp3', 'minute') $$,
   '23505', null, 'one replacement per built-in sound'
 );
+select lives_ok(
+  $$ insert into public.sounds (group_id, name, file_path, builtin_key)
+     values ((select id from ctx), 'Матч завершён!', (select id from ctx)::text || '/finished.mp3', 'finished') $$,
+  'organizer replaces the "match finished" phrase'
+);
+select throws_ok(
+  $$ insert into public.sounds (group_id, name, file_path, builtin_key)
+     values ((select id from ctx), 'Нет такого', (select id from ctx)::text || '/x.mp3', 'unknown') $$,
+  '23514', null, 'only known built-in keys are accepted'
+);
 select throws_ok(
   $$ insert into public.sounds (group_id, name, file_path)
      values ((select id from ctx), 'Чужой путь', 'other-group/x.mp3') $$,
@@ -45,7 +55,7 @@ select throws_ok(
 );
 
 select pg_temp.login('00000000-0000-4000-8000-000000000402');
-select is((select count(*)::int from public.sounds), 2, 'a member reads the group sounds');
+select is((select count(*)::int from public.sounds), 3, 'a member reads the group sounds');
 select throws_ok(
   $$ insert into public.sounds (group_id, name, file_path)
      values ((select id from ctx), 'Игрок', (select id from ctx)::text || '/p.mp3') $$,

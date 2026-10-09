@@ -6,7 +6,7 @@
 import { LOCALE_TAGS } from "@/lib/i18n/config";
 import type { MessageKey, T } from "@/lib/i18n";
 
-export type BuiltinKey = "minute" | "out" | "whistle" | "final";
+export type BuiltinKey = "minute" | "out" | "whistle" | "final" | "finished";
 
 export type BuiltinSound = {
   key: BuiltinKey;
@@ -22,6 +22,7 @@ export const BUILTIN_SOUNDS: BuiltinSound[] = [
   { key: "out", label: "До аута!", kind: "speech", text: "Играем до аута!" },
   { key: "whistle", label: "Свисток", kind: "whistle", pattern: "short" },
   { key: "final", label: "Финальный свисток", kind: "whistle", pattern: "final" },
+  { key: "finished", label: "Матч завершён!", kind: "speech", text: "Матч завершён!" },
 ];
 
 // Seconds of each blast: short = one blast; final = short, short, long.
@@ -41,7 +42,7 @@ export function builtinLabel(t: T, key: BuiltinKey): string {
 
 /** What the phone says for a voice button, and in which language. */
 export function builtinSpeech(t: T, key: BuiltinKey): { text: string; lang: string } | undefined {
-  if (key !== "minute" && key !== "out") return undefined;
+  if (key !== "minute" && key !== "out" && key !== "finished") return undefined;
   return { text: t(`sounds.speech.${key}` as MessageKey), lang: LOCALE_TAGS[t.locale] };
 }
 

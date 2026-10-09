@@ -16,7 +16,8 @@ export type PlayableSound = {
   filePath?: string | null; // Storage path; wins over the built-in sound when loaded
 };
 
-type Playing = { stop: () => void };
+// `ended` resolves when the sound is over (or was stopped): lets a sequence wait for it.
+type Playing = { stop: () => void; ended: Promise<void> };
 
 const PREFS_KEY = "weekball:sound-prefs";
 const fileKey = (path: string) => `weekball:sound:${path}`;
@@ -31,6 +32,8 @@ class SoundEngine {
   private raw = new Map<string, ArrayBuffer>();
   private decoded = new Map<string, AudioBuffer>();
   private unlocked = false;
+  // Grows with every new request, so a running sequence knows it was interrupted.
+  private run = 0;
   volume = 1;
   muted = false;
 
@@ -124,12 +127,36 @@ class SoundEngine {
   }
 
   stop() {
+    this.run++;
+    this.halt();
+  }
+
+  private halt() {
     this.current?.stop();
     this.current = null;
   }
 
+  /** One sound; whatever was playing (or queued) stops. */
   async play(sound: PlayableSound) {
-    this.stop();
+    this.run++;
+    return this.start(sound);
+  }
+
+  /**
+   * Several sounds one after another (final whistle, then "Матч завершён!").
+   * Pressing any button meanwhile cancels the rest.
+   */
+  async playSequence(sounds: PlayableSound[]) {
+    const run = ++this.run;
+    for (const sound of sounds) {
+      if (this.run !== run) return;
+      await this.start(sound);
+      await this.current?.ended;
+    }
+  }
+
+  private async start(sound: PlayableSound) {
+    this.halt();
     const source = sound.filePath && this.raw.has(sound.filePath) ? "file" : sound.builtin?.kind ?? "none";
     window.dispatchEvent(new CustomEvent("weekball:sound", { detail: { key: sound.key, source, muted: this.muted } }));
     if (this.muted) return;
@@ -154,11 +181,16 @@ class SoundEngine {
     node.buffer = buffer;
     node.connect(this.master!);
     node.start();
-    const playing = { stop: () => { try { node.stop(); } catch {} } };
-    this.current = playing;
-    node.onended = () => {
-      if (this.current === playing) this.current = null;
+    const playing: Playing = {
+      stop: () => { try { node.stop(); } catch {} },
+      ended: new Promise<void>((resolve) => {
+        node.onended = () => {
+          if (this.current === playing) this.current = null;
+          resolve();
+        };
+      }),
     };
+    this.current = playing;
   }
 
   // `russian` is always available as text; `translated` is used when the phone has a voice for it
@@ -176,8 +208,14 @@ class SoundEngine {
     utterance.volume = this.volume;
     const voice = own ?? voiceFor("ru");
     if (voice) utterance.voice = voice;
+    // Some phones never fire "end": don't let a sequence wait for ever.
+    const ended = new Promise<void>((resolve) => {
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      setTimeout(resolve, 8000);
+    });
     synth.speak(utterance);
-    this.current = { stop: () => synth.cancel() };
+    this.current = { stop: () => synth.cancel(), ended };
   }
 
   /** Pea-whistle: ~2.9 kHz tone with a fast trill, envelope per blast. */
@@ -211,7 +249,7 @@ class SoundEngine {
     trill.start();
     osc.stop(t);
     trill.stop(t);
-    const playing = {
+    const playing: Playing = {
       stop: () => {
         try {
           out.gain.cancelScheduledValues(ctx.currentTime);
@@ -220,11 +258,14 @@ class SoundEngine {
           trill.stop();
         } catch {}
       },
+      ended: new Promise<void>((resolve) => {
+        osc.onended = () => {
+          if (this.current === playing) this.current = null;
+          resolve();
+        };
+      }),
     };
     this.current = playing;
-    osc.onended = () => {
-      if (this.current === playing) this.current = null;
-    };
   }
 
   /** Fallback when there is no speech engine: two short tones. */
@@ -240,7 +281,12 @@ class SoundEngine {
     osc.frequency.setValueAtTime(660, t + 0.2);
     osc.start(t);
     osc.stop(t + 0.4);
-    this.current = { stop: () => { try { osc.stop(); } catch {} } };
+    this.current = {
+      stop: () => { try { osc.stop(); } catch {} },
+      ended: new Promise<void>((resolve) => {
+        osc.onended = () => resolve();
+      }),
+    };
   }
 }
 

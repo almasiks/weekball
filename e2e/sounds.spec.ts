@@ -87,9 +87,11 @@ test("sound board: built-in + own sounds, auto sounds, works offline", async ({ 
   await organizer.goto(`${gameUrl}/live`);
   await organizer.getByRole("button", { name: "Создать матч" }).click();
   const panel = organizer.getByRole("region", { name: "Звуки" });
-  for (const label of ["Минута!", "До аута!", "Свисток", "Финальный свисток", "Гол!"]) {
+  for (const label of ["Минута!", "До аута!", "Свисток", "Финальный свисток", "Матч завершён!", "Гол!"]) {
     await expect(panel.getByRole("button", { name: label, exact: true })).toBeVisible();
   }
+  // More buttons can be added right from the match screen.
+  await expect(panel.getByRole("link", { name: "Добавить звук" })).toHaveAttribute("href", /\/admin\/sounds\?from=[0-9a-f-]{36}$/);
   const box = await panel.getByRole("button", { name: "Свисток", exact: true }).boundingBox();
   expect(box!.height).toBeGreaterThanOrEqual(64);
   await expect(panel.getByText("на телефоне")).toBeVisible(); // files cached
@@ -121,6 +123,10 @@ test("sound board: built-in + own sounds, auto sounds, works offline", async ({ 
   }
   await expect(organizer.getByText(/Матч завершён · по лимиту голов/)).toBeVisible();
   await expect.poll(async () => (await played(organizer)).some((p) => p.key === "final")).toBe(true);
+  // ...followed by the phrase "Матч завершён!" (after the whistle, not instead of it).
+  await expect
+    .poll(async () => (await played(organizer)).map((p) => p.key).slice(-2), { timeout: 15_000 })
+    .toEqual(["final", "finished"]);
   await expect(organizer.getByText("Синхронизировано")).toBeVisible();
 
   // --- Offline: reopen the console without internet; own files come from the device.

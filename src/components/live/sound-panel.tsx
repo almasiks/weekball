@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CloudOff, Download, Volume2, VolumeX } from "lucide-react";
+import { CloudOff, Download, Plus, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { BUILTIN_SOUNDS, builtinLabel, builtinSpeech, type BuiltinKey } from "@/lib/sounds/builtin";
@@ -9,6 +9,7 @@ import { getSoundEngine, type PlayableSound } from "@/lib/sounds/engine";
 import type { SoundRow } from "@/lib/supabase/database.types";
 import { useT } from "@/lib/i18n/client";
 import type { T } from "@/lib/i18n";
+import Link from "next/link";
 
 export type PanelSound = Pick<SoundRow, "id" | "name" | "file_path" | "builtin_key" | "sort_order">;
 
@@ -29,10 +30,11 @@ async function download(path: string): Promise<ArrayBuffer | null> {
   return data.arrayBuffer();
 }
 
-type Props = { sounds: PanelSound[] };
+// manageHref: where the organizer adds more buttons (hidden when not given).
+type Props = { sounds: PanelSound[]; manageHref?: string };
 
 // Big sound buttons under the timer. Plays only on this device (the organizer's).
-export function SoundPanel({ sounds }: Props) {
+export function SoundPanel({ sounds, manageHref }: Props) {
   const t = useT();
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -92,6 +94,15 @@ export function SoundPanel({ sounds }: Props) {
             {item.label}
           </Button>
         ))}
+        {manageHref && (
+          <Link
+            href={manageHref}
+            className="flex h-16 min-h-16 items-center justify-center gap-1.5 rounded-lg border border-dashed px-2 text-sm font-medium text-muted-foreground hover:bg-muted/60"
+          >
+            <Plus className="size-4" aria-hidden />
+            {t("sounds.addSound")}
+          </Link>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

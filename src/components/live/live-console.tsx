@@ -38,7 +38,7 @@ import {
 } from "@/lib/match/format";
 import { NextMatchPicker } from "@/components/live/next-match-picker";
 import { builtinSound, SoundPanel, type PanelSound } from "@/components/live/sound-panel";
-import { endedByItself, minuteWarningDue } from "@/lib/sounds/auto";
+import { endedByItself, matchEnded, minuteWarningDue } from "@/lib/sounds/auto";
 import { getSoundEngine } from "@/lib/sounds/engine";
 import type { EventPayload, QueueItem } from "@/lib/match/queue";
 import type { EventType, LiveEvent, LiveMatch, LiveTeam } from "@/lib/match/types";
@@ -205,7 +205,8 @@ export function LiveConsole(props: Props) {
   }, [liveMatch, now, offset, gameFinished, enqueue]);
 
   // --- Auto sounds (switch in the game format): "Минута!" once per match in its
-  // last minute; the final whistle when a match ends by itself (time or goal limit).
+  // last minute; when a match ends — the final whistle (only if it ended by itself:
+  // time or goal limit) and then the phrase "Матч завершён!" (always, also after a manual end).
   const autoSounds = props.meta.autoSounds ?? true;
   const { sounds } = props;
   const minuteAnnounced = useRef(new Set<string>());
@@ -219,8 +220,10 @@ export function LiveConsole(props: Props) {
   const lastStatus = useRef(new Map<string, LiveMatch["status"]>());
   useEffect(() => {
     for (const m of matches) {
-      if (autoSounds && endedByItself(lastStatus.current.get(m.id), m)) {
-        void getSoundEngine().play(builtinSound("final", sounds, tr));
+      const before = lastStatus.current.get(m.id);
+      if (autoSounds && matchEnded(before, m)) {
+        const keys = endedByItself(before, m) ? (["final", "finished"] as const) : (["finished"] as const);
+        void getSoundEngine().playSequence(keys.map((key) => builtinSound(key, sounds, tr)));
       }
       lastStatus.current.set(m.id, m.status);
     }
@@ -407,7 +410,11 @@ export function LiveConsole(props: Props) {
               note={matchFormatLabel(tr, current)}
             />
 
-            <SoundPanel sounds={props.sounds} />
+            <SoundPanel
+              sounds={props.sounds}
+              // Uploading needs the network; offline the link would only lead to the "no internet" page.
+              manageHref={outbox.online ? `/admin/sounds?from=${gameId}` : undefined}
+            />
 
             {/* Timer controls */}
             {!gameFinished && (

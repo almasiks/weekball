@@ -2,6 +2,11 @@
 begin;
 select plan(17);
 
+-- Groups are no longer created from the app (single-group mode); the tests still use
+-- separate groups to check isolation, so the functions are opened inside this transaction.
+grant execute on function public.create_group(text, text), public.join_group(text, text, uuid),
+  public.group_claimable_players(text) to authenticated, anon;
+
 create function pg_temp.login(uid uuid) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
 $$;

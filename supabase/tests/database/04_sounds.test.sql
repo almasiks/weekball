@@ -2,6 +2,11 @@
 begin;
 select plan(14);
 
+-- Groups are no longer created from the app (single-group mode); the tests still use
+-- separate groups to check isolation, so the functions are opened inside this transaction.
+grant execute on function public.create_group(text, text), public.join_group(text, text, uuid),
+  public.group_claimable_players(text) to authenticated, anon;
+
 create function pg_temp.login(uid uuid) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
 $$;
@@ -81,12 +86,14 @@ select throws_ok(
   '42501', null, 'a player cannot upload files'
 );
 select is(
-  (select count(*)::int from storage.objects where bucket_id = 'sounds'),
+  (select count(*)::int from storage.objects
+   where bucket_id = 'sounds' and name like (select id from ctx)::text || '/%'),
   1, 'a member can read (download) the group files'
 );
 select pg_temp.login('00000000-0000-4000-8000-000000000403');
 select is(
-  (select count(*)::int from storage.objects where bucket_id = 'sounds'),
+  (select count(*)::int from storage.objects
+   where bucket_id = 'sounds' and name like (select id from ctx)::text || '/%'),
   0, 'an outsider cannot read the files'
 );
 

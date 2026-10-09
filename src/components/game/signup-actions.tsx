@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { Check, Clock, LoaderCircle, MapPinCheck, X } from "lucide-react";
+import { BottomSheet } from "@/components/bottom-sheet";
+import { IdentityPicker } from "@/components/identity-picker";
 import { Button } from "@/components/ui/button";
+import { enterAndSignupAction } from "@/lib/actions/entry";
 import { setArrivalAction, setSignupAction } from "@/lib/actions/games";
 import type { ArrivalStatus, SignupStatus } from "@/lib/supabase/database.types";
 import { useT } from "@/lib/i18n/client";
@@ -17,15 +20,19 @@ type Props = {
   lateMinutes: number | null;
   // Sign-up is open: "Иду" / "Не иду" are available.
   canSignup: boolean;
+  // This device has no player yet: "Иду" first asks who it is.
+  // The list = roster names nobody has taken yet.
+  unknown?: { names: string[] };
 };
 
 // The main button of the game card. Not signed up: one big "Иду".
 // Signed up: "Не иду" and, for players in the squad, "Опаздываю" / "Я на месте" next to it.
-export function SignupActions({ gameId, status, arrival, lateMinutes, canSignup }: Props) {
+export function SignupActions({ gameId, status, arrival, lateMinutes, canSignup, unknown }: Props) {
   const t = useT();
   const [pending, startTransition] = useTransition();
   const [busy, setBusy] = useState<"in" | "out" | null>(null);
   const [pickingLate, setPickingLate] = useState(false);
+  const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isIn = status === "going" || status === "waitlist";
@@ -56,7 +63,12 @@ export function SignupActions({ gameId, status, arrival, lateMinutes, canSignup 
   return (
     <div className="flex flex-col gap-2">
       {!isIn ? (
-        <Button size="lg" className="h-14 w-full text-lg" disabled={pending} onClick={() => signup(true)}>
+        <Button
+          size="lg"
+          className="h-14 w-full text-lg"
+          disabled={pending}
+          onClick={() => (unknown ? setAsking(true) : signup(true))}
+        >
           {busy === "in" ? <LoaderCircle className="animate-spin" aria-hidden /> : <Check aria-hidden />}
           {t("game.in")}
         </Button>
@@ -133,6 +145,16 @@ export function SignupActions({ gameId, status, arrival, lateMinutes, canSignup 
         <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
+      )}
+
+      {unknown && (
+        <BottomSheet open={asking} title={t("identity.title")} onClose={() => setAsking(false)}>
+          <IdentityPicker
+            names={unknown.names}
+            submitLabel={t("identity.signUp")}
+            onSubmit={(name) => enterAndSignupAction(gameId, name)}
+          />
+        </BottomSheet>
       )}
     </div>
   );

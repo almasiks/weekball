@@ -22,7 +22,7 @@ import { getGamePreview, getGameView } from "@/lib/games";
 import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
 import { getT } from "@/lib/i18n/server";
-import { EnterScreen } from "@/components/enter-screen";
+import { PageSkeleton } from "@/components/page-skeleton";
 
 const organizerTile =
   "flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl bg-card p-2 text-center text-xs font-medium ring-1 ring-foreground/10 hover:bg-muted/60";
@@ -63,8 +63,8 @@ export async function generateMetadata({
 export default async function GamePage({ params }: PageProps<"/game/[id]">) {
   const { id } = await params;
   const [ctx, t] = await Promise.all([getAppContext(), getT()]);
-  // Opened from a shared link on a new device: ask the name here, then show this game.
-  if (!ctx.player) return <EnterScreen />;
+  // Opened from a shared link on a new device: AutoSession signs it in, then the game shows.
+  if (!ctx.userId) return <PageSkeleton />;
   const view = UUID.test(id) ? await getGameView(id) : null;
 
   if (!view) {

@@ -13,17 +13,17 @@ const phone = async (browser: Browser, locale: string) => (await browser.newCont
 test("the interface follows the phone language, Russian by default", async ({ browser }) => {
   const english = await phone(browser, "en-US");
   await english.goto("/");
-  await expect(english.getByText("What's your name?")).toBeVisible();
+  await expect(english.getByText("No upcoming game yet")).toBeVisible();
   await expect(english.locator("html")).toHaveAttribute("lang", "en");
 
   const kazakh = await phone(browser, "kk-KZ");
   await kazakh.goto("/");
-  await expect(kazakh.getByText("Атың кім?")).toBeVisible();
+  await expect(kazakh.getByText("Жақын арада ойын жоқ")).toBeVisible();
 
   // A language we don't have falls back to Russian.
   const german = await phone(browser, "de-DE");
   await german.goto("/");
-  await expect(german.getByText("Как тебя зовут?")).toBeVisible();
+  await expect(german.getByText("Ближайшей игры пока нет")).toBeVisible();
   await expect(german.locator("html")).toHaveAttribute("lang", "ru");
 });
 
@@ -33,26 +33,26 @@ test("the language switcher is remembered and the whole flow works in Kazakh and
 
   const page = await phone(browser, "ru-RU");
   await page.goto("/");
-  await expect(page.getByText("Как тебя зовут?")).toBeVisible();
+  await expect(page.getByText("Ближайшей игры пока нет")).toBeVisible();
 
   // Switch to Kazakh: the page changes at once and stays so after a reload.
   await pickLanguage(page, "Қазақша");
-  await expect(page.getByText("Атың кім?")).toBeVisible();
+  await expect(page.getByText("Жақын арада ойын жоқ")).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Атың кім?")).toBeVisible();
+  await expect(page.getByText("Жақын арада ойын жоқ")).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "kk");
 
   // An error raised by the database comes back translated.
-  await page.getByLabel("Аты").fill("иван");
-  await page.getByRole("button", { name: "Кіру" }).click();
-  await expect(page.getByText("Мұндай ат бар екен, тегіңді немесе нөмір қос.")).toBeVisible();
-
-  // Enter and become the organizer in Kazakh: form labels, the menu and the admin page.
-  await page.getByLabel("Аты").fill("Ұйымдастырушы");
-  await page.getByRole("button", { name: "Кіру" }).click();
   const nav = page.getByRole("navigation", { name: "Негізгі навигация" });
   await expect(nav.getByRole("link")).toHaveText(["Ойын", "Матч", "Статистика", "Тарих", "Профиль"]);
+  await page.goto("/profile");
+  await page.getByLabel("Аты").fill("иван");
+  await page.getByRole("button", { name: "Бұл мен" }).click();
+  await expect(page.getByText("Мұндай ат бар екен, тегіңді немесе нөмір қос.")).toBeVisible();
+
+  // Become the organizer in Kazakh: form labels, the menu and the admin page.
   await page.goto("/admin");
+  await page.getByLabel("Атыңыз").fill("Ұйымдастырушы");
   await page.getByLabel("PIN-код").fill(ADMIN_PIN);
   await page.getByRole("button", { name: "Кіру" }).click();
   await expect(page.getByRole("link", { name: "Кесте және ойындар" })).toBeVisible();
@@ -97,7 +97,7 @@ test("the language is kept by the static pages too (offline shell, 404)", async 
   const page = await phone(browser, "ru-RU");
   await page.goto("/");
   await pickLanguage(page, "English");
-  await expect(page.getByText("What's your name?")).toBeVisible();
+  await expect(page.getByText("No upcoming game yet")).toBeVisible();
 
   await page.goto("/offline");
   await expect(page.getByRole("heading", { name: "No internet connection" })).toBeVisible();

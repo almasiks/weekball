@@ -73,11 +73,14 @@ test("solo organizer: roster, check-in (offline too), quick add, teams from pres
     await expect(organizer.getByRole("button", { name: card })).toBeVisible();
   }
 
-  // --- A real person opens the site, types the roster name and keeps its history
+  // --- A real person opens the game (e.g. the link from WhatsApp): it shows at once.
+  // "Иду" asks who they are; picking the roster name keeps its history.
   const phone = await (await browser.newContext()).newPage();
-  await phone.goto(gameUrl); // e.g. the link from WhatsApp: the name is asked right there
-  await phone.getByLabel("Имя").fill("азамат");
-  await phone.getByRole("button", { name: "Войти" }).click();
+  await phone.goto(gameUrl);
+  await expect(phone.getByRole("listitem").filter({ hasText: "Азамат" }).getByText("на месте")).toBeVisible();
+  await phone.getByRole("button", { name: "Иду", exact: true }).click();
+  await phone.getByRole("dialog").getByRole("button", { name: "Азамат" }).click();
+  await phone.getByRole("dialog").getByRole("button", { name: "Записаться" }).click();
   // The organizer already checked Азамат in: this phone IS that player now.
   const me = phone.getByRole("listitem").filter({ hasText: "Азамат (вы)" });
   await expect(me.getByText("на месте")).toBeVisible();
@@ -87,8 +90,13 @@ test("solo organizer: roster, check-in (offline too), quick add, teams from pres
 
   // The name now belongs to that phone: somebody else gets the hint.
   const other = await (await browser.newContext()).newPage();
-  await other.goto("/");
-  await other.getByLabel("Имя").fill("Азамат");
-  await other.getByRole("button", { name: "Войти" }).click();
-  await expect(other.getByText("Такое имя уже есть, добавь фамилию или номер.")).toBeVisible();
+  await other.goto(gameUrl);
+  await other.getByRole("button", { name: "Иду", exact: true }).click();
+  const sheet = other.getByRole("dialog");
+  await expect(sheet.getByRole("button", { name: "Бекзат" })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Азамат" })).toHaveCount(0);
+  await sheet.getByRole("button", { name: "Меня нет в списке" }).click();
+  await sheet.getByLabel("Имя").fill("Азамат");
+  await sheet.getByRole("button", { name: "Записаться" }).click();
+  await expect(sheet.getByText("Такое имя уже есть, добавь фамилию или номер.")).toBeVisible();
 });

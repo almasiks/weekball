@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AutoSession } from "@/components/auto-session";
 import { BottomNav } from "@/components/bottom-nav";
 import { InstallBanner } from "@/components/install-banner";
 import { PlayerAvatar } from "@/components/player-avatar";
@@ -35,15 +36,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       </header>
       <main
         className={
-          ctx.player
+          ctx.userId
             ? "mx-auto w-full max-w-md flex-1 px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))]"
             : "mx-auto w-full max-w-md flex-1 px-4 py-6"
         }
       >
-        {ctx.userId && <InstallBanner />}
+        {ctx.userId ? <InstallBanner /> : <AutoSession />}
         {children}
       </main>
-      {ctx.player && <BottomNav isOrganizer={ctx.role === "organizer"} />}
+      {ctx.userId && <BottomNav isOrganizer={ctx.role === "organizer"} />}
     </I18nProvider>
   );
 }

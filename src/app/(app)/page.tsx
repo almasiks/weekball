@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarClock } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EnterScreen } from "@/components/enter-screen";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { GamePanel } from "@/components/game/game-panel";
 import { LiveBanner } from "@/components/game/live-banner";
 import { UpcomingGamesList } from "@/components/game/upcoming-games-list";
@@ -14,10 +14,11 @@ import { getAppContext } from "@/lib/session";
 import { getSiteUrl } from "@/lib/site-url";
 import { cn } from "@/lib/utils";
 
-// Home = the next game. A device that is not known yet gets "Как тебя зовут?" instead.
+// Home = the next game, for everyone and at once: nobody is asked anything on entry.
+// (The very first load of a device shows a skeleton for a moment while AutoSession signs it in.)
 export default async function HomePage() {
   const [ctx, t] = await Promise.all([getAppContext(), getT()]);
-  if (!ctx.player || !ctx.group) return <EnterScreen />;
+  if (!ctx.group) return <PageSkeleton />;
 
   const [upcoming, siteUrl] = await Promise.all([getUpcomingGames(ctx.group.id), getSiteUrl()]);
   const [nextGame, ...laterGames] = upcoming;

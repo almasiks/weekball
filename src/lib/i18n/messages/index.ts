@@ -5,7 +5,7 @@ import { common, install, nav, offline } from "./common";
 import { colors, dates, format, positions, share, status } from "./domain";
 import { errors } from "./errors";
 import { arrival, cards, checkin, game, gameStats } from "./game";
-import { adminPin, enter, home, profile } from "./home";
+import { adminPin, home, identity, profile } from "./home";
 import { live, sounds } from "./live";
 import { match } from "./match";
 import { roster } from "./roster";
@@ -23,12 +23,12 @@ const ALL = {
   colors,
   common,
   dates,
-  enter,
   errors,
   format,
   game,
   gameStats,
   home,
+  identity,
   install,
   live,
   match,

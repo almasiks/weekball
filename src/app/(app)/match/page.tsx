@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 // The organizer lands in the console, players see the score, timer and events.
 export default async function CurrentMatchPage() {
   const [ctx, t] = await Promise.all([getAppContext(), getT()]);
-  if (!ctx.player || !ctx.group) redirect("/");
+  if (!ctx.group) redirect("/");
 
   const [game] = await getUpcomingGames(ctx.group.id, 1);
   const view = game ? await getGameView(game.id) : null;

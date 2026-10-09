@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { getT } from "@/lib/i18n/server";
 import type { T } from "@/lib/i18n";
 import { formatLabel } from "@/lib/match/format";
+import { getFreeRosterNames } from "@/lib/session";
 
 type Props = {
   view: GameView;
@@ -34,6 +35,8 @@ export async function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
       ? waitlist.findIndex((s) => s.playerId === me.playerId) + 1
       : null;
   const isActive = game.status !== "cancelled" && game.status !== "finished";
+  // No player on this device yet: the first "Иду" asks "Кто ты?" with the free roster names.
+  const unknown = !userId && game.status === "signup" ? { names: await getFreeRosterNames(game.group_id) } : undefined;
   const myTeam = game.teams_published_at
     ? view.teams.find((t) => t.players.some((p) => p.playerId === userId))
     : undefined;
@@ -124,6 +127,7 @@ export async function GamePanel({ view, userId, gameUrl, linkToGame }: Props) {
             arrival={me?.arrival ?? "pending"}
             lateMinutes={me?.lateMinutes ?? null}
             canSignup={game.status === "signup"}
+            unknown={unknown}
           />
         )}
         {game.status === "closed" && (

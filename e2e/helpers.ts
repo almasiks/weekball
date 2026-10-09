@@ -39,18 +39,30 @@ export async function newDevice(browser: Browser): Promise<Page> {
   return context.newPage();
 }
 
-/** First visit: "Как тебя зовут?" -> the home page with the next game. */
-export async function enter(page: Page, name: string) {
+/** First visit of a device: nothing is asked, the app just opens (the menu appears). */
+export async function open(page: Page) {
   await page.goto("/");
-  await page.getByLabel("Имя").fill(name);
-  await page.getByRole("button", { name: "Войти" }).click();
   await expect(page.getByRole("navigation", { name: "Основная навигация" })).toBeVisible();
 }
 
-/** Enters with a name, then becomes the organizer with the PIN. */
+/** Opens the app and says who this device is (Профиль -> "Кто ты?"), typing a new name. */
+export async function enter(page: Page, name: string) {
+  await open(page);
+  await page.goto("/profile");
+  const confirm = page.getByRole("button", { name: "Это я" });
+  await expect(confirm).toBeVisible();
+  const notInList = page.getByRole("button", { name: "Меня нет в списке" });
+  if (await notInList.isVisible()) await notInList.click();
+  await page.getByLabel("Имя").fill(name);
+  await confirm.click();
+  await expect(page.getByRole("banner").getByRole("link", { name })).toBeVisible();
+}
+
+/** Opens the app and becomes the organizer: name + PIN on /admin. */
 export async function enterAsOrganizer(page: Page, name: string) {
-  await enter(page, name);
+  await open(page);
   await page.goto("/admin");
+  await page.getByLabel("Ваше имя").fill(name);
   await page.getByLabel("PIN-код").fill(ADMIN_PIN);
   await page.getByRole("button", { name: "Войти" }).click();
   await expect(page.getByRole("link", { name: "Расписание и игры" })).toBeVisible();

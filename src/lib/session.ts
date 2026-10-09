@@ -9,12 +9,13 @@ import { getT } from "@/lib/i18n/server";
 export const DEFAULT_GROUP_ID = "00000000-0000-4000-8000-000000000001";
 
 export type AppContext = {
-  // Auth account (anonymous; may exist without a player until a name is entered).
+  // Anonymous auth account of this device. Created silently on the first visit
+  // (AutoSession); it has no player until the person says who they are.
   userId: string | null;
   // The player linked to this account (players.user_id). Compare player ids with THIS.
   playerId: string | null;
   player: { id: string; name: string; position: PlayerPosition | null } | null;
-  // Set as soon as there is a player. Always the default group.
+  // Set as soon as there is a session. Always the default group.
   group: { id: string; name: string } | null;
   role: MemberRole | null;
 };
@@ -34,7 +35,8 @@ export const getAppContext = cache(async (): Promise<AppContext> => {
     .select("id, name, position")
     .eq("user_id", userId)
     .maybeSingle();
-  if (!player) return { ...EMPTY, userId };
+  const group = { id: DEFAULT_GROUP_ID, name: "Weekly Football" };
+  if (!player) return { ...EMPTY, userId, group };
 
   const { data: membership } = await supabase
     .from("group_members")
@@ -47,7 +49,7 @@ export const getAppContext = cache(async (): Promise<AppContext> => {
     userId,
     playerId: player.id,
     player,
-    group: { id: DEFAULT_GROUP_ID, name: "Weekly Football" },
+    group,
     role: membership?.role ?? "player",
   };
 });
@@ -62,6 +64,14 @@ export type RosterMember = {
   isRegular: boolean;
   archived: boolean;
 };
+
+/** Roster names nobody has taken yet: offered in "Кто ты?". */
+export async function getFreeRosterNames(groupId: string): Promise<string[]> {
+  return (await getGroupMembers(groupId))
+    .filter((m) => !m.hasAccount && !m.archived && m.isRegular)
+    .map((m) => m.name)
+    .sort((a, b) => a.localeCompare(b, "ru"));
+}
 
 export async function getGroupMembers(groupId: string): Promise<RosterMember[]> {
   const [supabase, t] = await Promise.all([createClient(), getT()]);

@@ -11,12 +11,18 @@ import { useT } from "@/lib/i18n/client";
 
 // Organizer entry. The PIN is checked on the server (ADMIN_PIN); a right one
 // re-renders /admin with the organizer screen.
-export function PinForm() {
+export function PinForm({ askName }: { askName: boolean }) {
   const t = useT();
   const [state, formAction] = useActionState<FormState, FormData>(adminPinAction, {});
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      {askName && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="admin-name">{t("adminPin.name")}</Label>
+          <Input id="admin-name" name="name" maxLength={40} required autoComplete="given-name" className="h-12" />
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         <Label htmlFor="admin-pin">{t("adminPin.label")}</Label>
         <Input
@@ -27,7 +33,6 @@ export function PinForm() {
           autoComplete="off"
           maxLength={64}
           required
-          autoFocus
           className="h-14 text-center text-xl tracking-widest"
         />
       </div>

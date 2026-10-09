@@ -17,7 +17,7 @@ const row = "flex min-h-14 items-center gap-3 rounded-xl bg-card px-4 ring-1 rin
 
 export default async function AdminPage() {
   const [ctx, t] = await Promise.all([getAppContext(), getT()]);
-  if (!ctx.player || !ctx.group) redirect("/");
+  if (!ctx.group) redirect("/");
 
   // Not an organizer yet: the PIN (checked on the server) opens this section.
   if (ctx.role !== "organizer") {
@@ -28,7 +28,7 @@ export default async function AdminPage() {
           <CardDescription>{t("adminPin.text")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <PinForm />
+          <PinForm askName={!ctx.player} />
         </CardContent>
       </Card>
     );

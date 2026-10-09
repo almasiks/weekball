@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { History } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { PlayerAvatar } from "@/components/player-avatar";
-import { FormDots } from "@/components/stats/form-dots";
 import { getAppContext } from "@/lib/session";
 import { getLeaderboard, periodStart, type StatsPeriod } from "@/lib/stats";
 import type { LeaderboardRow } from "@/lib/supabase/database.types";
@@ -209,7 +208,6 @@ export default async function StatsPage({ searchParams }: PageProps<"/stats">) {
                               </span>
                             )}
                           </span>
-                          <FormDots form={r.form} />
                         </span>
                       </Link>
                     </td>
